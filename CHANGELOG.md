@@ -51,8 +51,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Interactive UI toggle button in `BarWidget.qml` panel:
   - `󰂌  Dual Connection` (toggles dual-device multipoint pairing on firmware).
 
+### Added (Day 6 - Completed ✅)
+- "Find My Buds" acoustic locator chime engine (`AcousticLocator` in `src/realme_buds/locator.py`):
+  - In-memory synthesis of high-penetration acoustic chirps (2.2 kHz → 3.8 kHz frequency sweep) without external Python libraries.
+  - Channel-specific audio isolation allowing independent ringing of Left earbud only, Right earbud only, or Both.
+  - Dynamic discovery and targeted PipeWire / PulseAudio routing directly to the realme Buds T310 Bluetooth audio sink (`bluez_output.84_9D_4B_82_AD_80.*`).
+  - Auto-stop safety timeout (default 30 seconds) and instantaneous stop cancellation.
+- Hearing safety gate in `BarWidget.qml` panel:
+  - Clear user warning: *"⚠️ Earbuds play a loud sound. Do NOT wear them!"*
+  - Independent trigger buttons (`Left`, `Right`, `Both`) and immediate `󰓛  Stop Ringing` button.
+- CLI commands: `./realme-buds find status`, `./realme-buds find left`, `./realme-buds find right`, `./realme-buds find both`, and `./realme-buds find stop` (with `./realme-buds ring` shorthand alias).
+- Quickshell IPC endpoints `ringBuds`, `stopRingBuds`, and `ringStatus`.
+
 ### Planned (Daily Shipping Roadmap)
-- **Day 6**: "Find My Buds" acoustic locator chime.
 - **Day 7**: Touch gesture remapping for physical tap controls.
 
 ---

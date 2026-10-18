@@ -14,7 +14,8 @@
     "eq",
     "game_mode",
     "wear_detection",
-    "multipoint"
+    "multipoint",
+    "locator"
   ],
   "anc": {
     "write_indices": {

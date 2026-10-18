@@ -9,6 +9,7 @@ from typing import TypeAlias
 
 from .availability import Availability
 from .controller import BudsController
+from .locator import AcousticLocator
 from .models import ControllerSnapshot, ControlResult, EqControlResult
 from .mpris import MprisManager
 from .notifications import NotificationEvent
@@ -69,6 +70,7 @@ class BudsFrontendBridge:
         self.dispatch = dispatch or (lambda callback: callback())
         self._recent_errors: deque[str] = deque(maxlen=12)
         self.mpris_manager = MprisManager(enabled=True)
+        self.locator = AcousticLocator(default_address=self.controller.address)
         self._last_charging_state: bool | None = None
         self.runner = BudsServiceRunner(
             self.controller,
@@ -217,6 +219,16 @@ class BudsFrontendBridge:
                 success, snapshot = self.controller.set_multipoint_with_snapshot(enabled)
                 result = {"multipoint": enabled, "success": success}
                 self._on_snapshot(snapshot)
+            elif command == "ring_buds":
+                target = str(params.get("target", "both")).lower()
+                duration = float(params.get("duration", 30.0))
+                result = self.locator.start(target=target, duration=duration, address=self.controller.address)
+            elif command == "stop_ring_buds":
+                self._require_parameters(command, params, set())
+                result = self.locator.stop()
+            elif command == "ring_status":
+                self._require_parameters(command, params, set())
+                result = self.locator.get_state()
             elif command == "save_diagnostic_report":
                 self._require_parameters(command, params, {"path"})
                 path = params["path"]

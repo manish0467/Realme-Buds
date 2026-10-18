@@ -7,8 +7,9 @@ import shutil
 import subprocess
 
 from .backend import (cycle_anc, device_summary, diagnostics_report, query_capabilities, query_eq,
-                      query_game_mode, query_multipoint, query_status, query_wear_detection, set_anc,
-                      set_custom_eq, set_eq, set_game_mode, set_multipoint, set_wear_detection)
+                      query_game_mode, query_multipoint, query_status, query_wear_detection, ring_buds,
+                      ring_status, set_anc, set_custom_eq, set_eq, set_game_mode, set_multipoint,
+                      set_wear_detection, stop_ring_buds)
 from .bluez import connected_devices
 
 
@@ -238,6 +239,42 @@ def _try_shell_multipoint(action: str) -> dict[str, object] | None:
     return None
 
 
+def _try_shell_find(action: str) -> dict[str, object] | None:
+    if not shutil.which("omarchy-shell"):
+        return None
+    try:
+        if action == "status":
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "ringStatus"],
+                capture_output=True,
+                text=True,
+                timeout=1.5,
+            )
+            if proc.returncode == 0:
+                return json.loads(proc.stdout)
+        elif action == "stop":
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "stopRingBuds"],
+                capture_output=True,
+                text=True,
+                timeout=2.0,
+            )
+            if proc.returncode == 0:
+                return {"ringing": False, "stopped": True}
+        elif action in ("left", "right", "both"):
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "ringBuds", action],
+                capture_output=True,
+                text=True,
+                timeout=2.0,
+            )
+            if proc.returncode == 0:
+                return {"ringing": True, "target": action}
+    except Exception:
+        pass
+    return None
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="realme-buds")
     parser.add_argument("--device", metavar="ADDRESS", help="select a connected device by Bluetooth address")
@@ -296,6 +333,18 @@ def main() -> None:
         nargs="?",
         default="status",
         help="query or configure dual-device multipoint switch (default: status)",
+    )
+    find_parser = subparsers.add_parser(
+        "find",
+        aliases=["ring"],
+        help="ring misplaced earbuds with acoustic locator chime",
+    )
+    find_parser.add_argument(
+        "action",
+        choices=("left", "right", "both", "stop", "status"),
+        nargs="?",
+        default="status",
+        help="acoustic locator action: left, right, both, stop, status (default: status)",
     )
     args = parser.parse_args()
     try:
@@ -386,6 +435,18 @@ def main() -> None:
                 output = set_multipoint(args.action == "on", args.device)
             else:
                 output = query_multipoint(args.device)
+        elif args.command in ("find", "ring"):
+            shell_res = _try_shell_find(args.action) if args.device is None else None
+            if shell_res is not None:
+                output = shell_res
+            elif args.action == "status":
+                output = ring_status()
+            elif args.action == "stop":
+                output = stop_ring_buds()
+            elif args.action in ("left", "right", "both"):
+                output = ring_buds(target=args.action, address=args.device)
+            else:
+                output = ring_status()
         elif args.command == "anc":
             if args.mode == "status":
                 status = query_status(args.device)

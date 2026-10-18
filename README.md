@@ -16,6 +16,7 @@ This is an independent project, unaffiliated with realme or OPPO.
 - Low battery desktop notifications (20% warning and 10% critical thresholds) with anti-spam coalescing.
 - In-ear capacitive wear detection switch and desktop MPRIS media auto-pause/resume hook.
 - Dual-device / Multipoint connection switch for simultaneous PC + smartphone pairing.
+- "Find My Buds" acoustic locator chime with independent Left / Right / Both channels and hearing safety gates.
 - Icon-only idle widget; hover reveals known batteries (with charging indicators), with delayed collapse.
 - Responsive panel with full-width device status, balanced ANC/EQ columns when
   space permits, and a compact scrolling fallback on narrow displays.
@@ -168,6 +169,13 @@ Re-enable afterward to resume monitoring.
 # Dual-device / Multipoint connection
 ./realme-buds multipoint status    # Show dual-connection state (or: ./realme-buds dual status)
 ./realme-buds multipoint on        # Enable dual-device connection (or: off, toggle)
+
+# "Find My Buds" acoustic locator chime
+./realme-buds find status          # Show acoustic locator status (or: ./realme-buds ring status)
+./realme-buds find left            # Ring left earbud only
+./realme-buds find right           # Ring right earbud only
+./realme-buds find both            # Ring both earbuds
+./realme-buds find stop            # Immediately stop ringing
 
 # Control noise cancellation directly
 ./realme-buds anc status

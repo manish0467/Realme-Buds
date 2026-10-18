@@ -131,6 +131,18 @@ Item {
     return request("multipoint_status", {})
   }
 
+  function ringBuds(target) {
+    return request("ring_buds", { target: String(target || "both") })
+  }
+
+  function stopRingBuds() {
+    return request("stop_ring_buds", {})
+  }
+
+  function ringStatus() {
+    return request("ring_status", {})
+  }
+
   function eqStatus() {
     return request("eq_status", {})
   }

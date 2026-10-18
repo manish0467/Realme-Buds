@@ -6,6 +6,7 @@ from dataclasses import replace
 
 from .lifecycle_trace import mark
 from .bluez import Device, select_device
+from .locator import AcousticLocator
 from .models import CapabilityResult, ControlResult, EqControlResult, EqStatusResult, StatusResult
 from .profiles import compatibility_for_product, profile_for_product
 from .report import build_status_report
@@ -319,6 +320,30 @@ def set_multipoint(enabled: bool, address: str | None = None) -> dict[str, objec
         return {"multipoint": enabled, "success": s}
     finally:
         session.__exit__(None, None, None)
+
+
+_LOCATOR: AcousticLocator | None = None
+
+
+def _get_locator() -> AcousticLocator:
+    global _LOCATOR
+    if _LOCATOR is None:
+        _LOCATOR = AcousticLocator()
+    return _LOCATOR
+
+
+def ring_buds(target: str = "both", duration: float = 30.0, address: str | None = None) -> dict[str, object]:
+    device = select_device(address) if address else None
+    addr = device.address if device else None
+    return _get_locator().start(target=target, duration=duration, address=addr)
+
+
+def stop_ring_buds() -> dict[str, object]:
+    return _get_locator().stop()
+
+
+def ring_status() -> dict[str, object]:
+    return _get_locator().get_state()
 
 
 def read_eq(address: str | None = None) -> EqStatusResult:

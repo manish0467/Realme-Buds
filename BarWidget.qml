@@ -57,6 +57,9 @@ BarWidget {
     && snapshot.feature_switches.multipoint === true)
   property bool notificationsEnabled: true
   property bool mprisHookEnabled: true
+  property bool locatorRinging: false
+  property string locatorTarget: ""
+  property bool locatorCardOpen: false
   readonly property bool useTwoColumnLayout: eqAvailable
     && popup.availableCardWidth >= Style.space(560)
   readonly property int panelHeight: popup.contentHeight
@@ -228,6 +231,27 @@ BarWidget {
     pendingMode = nextState ? "dual_on" : "dual_off"
     pendingKind = "multipoint"
     outcome = ""
+  }
+
+  function ringBuds(target) {
+    if (!budsService) return
+    locatorTarget = String(target || "both")
+    locatorRinging = true
+    budsService.ringBuds(locatorTarget)
+  }
+
+  function stopRingBuds() {
+    if (!budsService) return
+    locatorRinging = false
+    locatorTarget = ""
+    budsService.stopRingBuds()
+  }
+
+  function toggleLocatorCard() {
+    locatorCardOpen = !locatorCardOpen
+    if (!locatorCardOpen && locatorRinging) {
+      stopRingBuds()
+    }
   }
 
   function selectEq(value) {
@@ -658,6 +682,102 @@ BarWidget {
                 Keys.onUpPressed: nextItemInFocusChain(false).forceActiveFocus(Qt.BacktabFocusReason)
                 Keys.onEscapePressed: root.close()
                 onClicked: root.toggleMultipoint()
+              }
+
+              Button {
+                id: findBudsButton
+                width: featureColumn.width
+                height: Math.max(implicitHeight, Style.space(32))
+                text: root.locatorRinging ? "󰓛  Ringing (" + root.locatorTarget + ")…" : "󰖲  Find My Buds"
+                selected: root.locatorCardOpen || root.locatorRinging
+                bordered: true
+                leftAlign: true
+                enabled: root.connection === "connected"
+                opacity: enabled ? 1.0 : 0.5
+                foreground: root.bar.foreground
+                background: root.bar.background
+                accent: Color.accent
+                fontFamily: root.bar.fontFamily
+                focusable: true
+                onActiveFocusChanged: if (activeFocus) panelScroll.reveal(this)
+                Keys.onDownPressed: nextItemInFocusChain().forceActiveFocus(Qt.TabFocusReason)
+                Keys.onUpPressed: nextItemInFocusChain(false).forceActiveFocus(Qt.BacktabFocusReason)
+                Keys.onEscapePressed: root.close()
+                onClicked: root.toggleLocatorCard()
+              }
+
+              Column {
+                id: locatorCard
+                width: featureColumn.width
+                visible: root.locatorCardOpen
+                spacing: Style.space(5)
+
+                Text {
+                  width: parent.width
+                  text: "⚠️ Earbuds play a loud sound. Do NOT wear them!"
+                  textFormat: Text.PlainText
+                  color: root.bar.foreground
+                  font.family: root.bar.fontFamily
+                  font.pixelSize: Style.font.bodySmall
+                  font.bold: true
+                  wrapMode: Text.Wrap
+                }
+
+                Row {
+                  width: parent.width
+                  spacing: Style.space(4)
+                  visible: !root.locatorRinging
+
+                  Button {
+                    width: (parent.width - Style.space(8)) / 3
+                    height: Math.max(implicitHeight, Style.space(28))
+                    text: "Left"
+                    bordered: true
+                    foreground: root.bar.foreground
+                    background: root.bar.background
+                    accent: Color.accent
+                    fontFamily: root.bar.fontFamily
+                    onClicked: root.ringBuds("left")
+                  }
+
+                  Button {
+                    width: (parent.width - Style.space(8)) / 3
+                    height: Math.max(implicitHeight, Style.space(28))
+                    text: "Right"
+                    bordered: true
+                    foreground: root.bar.foreground
+                    background: root.bar.background
+                    accent: Color.accent
+                    fontFamily: root.bar.fontFamily
+                    onClicked: root.ringBuds("right")
+                  }
+
+                  Button {
+                    width: (parent.width - Style.space(8)) / 3
+                    height: Math.max(implicitHeight, Style.space(28))
+                    text: "Both"
+                    bordered: true
+                    foreground: root.bar.foreground
+                    background: root.bar.background
+                    accent: Color.accent
+                    fontFamily: root.bar.fontFamily
+                    onClicked: root.ringBuds("both")
+                  }
+                }
+
+                Button {
+                  width: parent.width
+                  height: Math.max(implicitHeight, Style.space(30))
+                  visible: root.locatorRinging
+                  text: "󰓛  Stop Ringing"
+                  selected: true
+                  bordered: true
+                  foreground: root.bar.foreground
+                  background: root.bar.background
+                  accent: Color.accent
+                  fontFamily: root.bar.fontFamily
+                  onClicked: root.stopRingBuds()
+                }
               }
             }
           }
@@ -1098,6 +1218,23 @@ BarWidget {
       })
     }
 
+    function ringBuds(target: string): string {
+      root.ringBuds(target)
+      return "ok"
+    }
+
+    function stopRingBuds(): string {
+      root.stopRingBuds()
+      return "ok"
+    }
+
+    function ringStatus(): string {
+      return JSON.stringify({
+        ringing: root.locatorRinging,
+        target: root.locatorTarget
+      })
+    }
+
     function status(): string {
       return JSON.stringify({
         service: root.budsService !== null,
@@ -1125,6 +1262,8 @@ BarWidget {
         mpris_hook_enabled: root.mprisHookEnabled,
         multipoint: root.multipointEnabled,
         multipoint_available: root.multipointAvailable,
+        ringing: root.locatorRinging,
+        ringing_target: root.locatorTarget,
         pending: root.pendingRequestId >= 0,
         eq: root.eqStatus,
         compatibility: root.compatibilityKind,
