@@ -20,8 +20,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Quickshell IPC endpoints `setGameMode` and `toggleGameMode` on `realme-buds.control`.
 - Global Hyprland hotkey binding (`SUPER + ALT + G`) in `~/.config/hypr/bindings.lua`.
 
+### Added (Day 3 - Completed ✅)
+- Low Battery Desktop Notifications policy (`BatteryNotificationPolicy` in `src/realme_buds/notifications.py`) with 20% warning and 10% critical thresholds.
+- Anti-spam guard: alerts fire strictly once per discharge cycle and automatically reset when charging begins or battery recovers above 25%.
+- Notification coalescing: combines simultaneous left and right earbud low-battery alerts into a single unified desktop notification.
+- Discrete monitoring for left earbud, right earbud, charging case, and single-battery fallback devices.
+- Integration with Omarchy desktop notification server (`notify-send` / `omarchy notification send`).
+- CLI commands: `./realme-buds notify status`, `./realme-buds notify on`, `./realme-buds notify off`, and `./realme-buds notify test`.
+- Quickshell IPC endpoints `testNotification`, `setNotifications`, and `notifyStatus`.
+- Interactive UI toggle button (`󰂃  Battery Alerts (20% & 10%)`) in the panel.
+
 ### Planned (Daily Shipping Roadmap)
-- **Day 3**: Battery threshold notifications (20% warning, 10% critical) with anti-spam discharge tracking.
 - **Day 4**: In-ear wear detection toggle and desktop MPRIS auto-pause hook.
 - **Day 5**: Dual-device / Multipoint switch support.
 - **Day 6**: "Find My Buds" acoustic locator chime.

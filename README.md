@@ -150,6 +150,12 @@ Re-enable afterward to resume monitoring.
 ./realme-buds game status
 ./realme-buds game on              # or: off, toggle
 
+# Low battery desktop notifications
+./realme-buds notify status        # Show notification thresholds and state
+./realme-buds notify on            # Enable notifications (default)
+./realme-buds notify off           # Disable notifications
+./realme-buds notify test          # Send a test desktop notification
+
 # Control noise cancellation directly
 ./realme-buds anc status
 ./realme-buds anc on               # or: off, transparency

@@ -11,6 +11,7 @@ from .availability import Availability
 from .lifecycle_trace import mark
 from .controller import BudsController
 from .models import ControllerSnapshot
+from .notifications import BatteryNotificationPolicy, NotificationEvent
 
 ConnectionState = Literal["connecting", "connected", "reconnecting", "disconnected", "stopped"]
 
@@ -34,8 +35,10 @@ class BudsServiceRunner:
         poll_interval: float = 0.5,
         initial_retry_delay: float = 1.0,
         maximum_retry_delay: float = 30.0,
+        notification_policy: BatteryNotificationPolicy | None = None,
         on_state: Callable[[ServiceState], None] | None = None,
         on_snapshot: Callable[[ControllerSnapshot], None] | None = None,
+        on_notification: Callable[[NotificationEvent], None] | None = None,
     ) -> None:
         if poll_interval < 0:
             raise ValueError("poll_interval must not be negative")
@@ -49,8 +52,10 @@ class BudsServiceRunner:
         self.poll_interval = poll_interval
         self.initial_retry_delay = initial_retry_delay
         self.maximum_retry_delay = maximum_retry_delay
+        self.notification_policy = notification_policy or BatteryNotificationPolicy()
         self.on_state = on_state
         self.on_snapshot = on_snapshot
+        self.on_notification = on_notification
 
     def run(self, cancelled: Event) -> ControllerSnapshot:
         """Run until cancellation, retrying expected connection failures."""
@@ -131,5 +136,10 @@ class BudsServiceRunner:
             self.on_state(state)
 
     def _publish_snapshot(self, snapshot: ControllerSnapshot) -> None:
+        if snapshot.status is not None and snapshot.session_connected:
+            events = self.notification_policy.check_and_notify(snapshot.status)
+            if self.on_notification is not None:
+                for event in events:
+                    self.on_notification(event)
         if self.on_snapshot is not None:
             self.on_snapshot(snapshot)

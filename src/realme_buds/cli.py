@@ -89,6 +89,43 @@ def _try_shell_game_mode(action: str) -> dict[str, object] | None:
     return None
 
 
+def _try_shell_notify(action: str) -> dict[str, object] | None:
+    if not shutil.which("omarchy-shell"):
+        return None
+    try:
+        if action == "status":
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "notifyStatus"],
+                capture_output=True,
+                text=True,
+                timeout=1.5,
+            )
+            if proc.returncode == 0:
+                return json.loads(proc.stdout)
+        elif action == "test":
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "testNotification"],
+                capture_output=True,
+                text=True,
+                timeout=2.0,
+            )
+            if proc.returncode == 0:
+                return {"sent": True, "verified": True}
+        else:
+            enabled = (action == "on")
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "setNotifications", "true" if enabled else "false"],
+                capture_output=True,
+                text=True,
+                timeout=2.0,
+            )
+            if proc.returncode == 0:
+                return {"enabled": enabled, "verified": True}
+    except Exception:
+        pass
+    return None
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="realme-buds")
     parser.add_argument("--device", metavar="ADDRESS", help="select a connected device by Bluetooth address")
@@ -119,6 +156,14 @@ def main() -> None:
         nargs="?",
         default="status",
         help="query or set game mode state (default: status)",
+    )
+    notify_parser = subparsers.add_parser("notify", help="query, toggle, or test low battery desktop notifications")
+    notify_parser.add_argument(
+        "action",
+        choices=("status", "on", "off", "test"),
+        nargs="?",
+        default="status",
+        help="query, configure, or test battery notifications (default: status)",
     )
     args = parser.parse_args()
     try:
@@ -161,6 +206,21 @@ def main() -> None:
                 output = set_game_mode(next_val, args.device)
             else:
                 output = set_game_mode(args.action == "on", args.device)
+        elif args.command == "notify":
+            shell_res = _try_shell_notify(args.action) if args.device is None else None
+            if shell_res is not None:
+                output = shell_res
+            elif args.action == "test":
+                from .notifications import BatteryNotificationPolicy
+                policy = BatteryNotificationPolicy()
+                event = policy.send_test_notification()
+                output = {"sent": True, "event": event.to_dict()}
+            elif args.action == "status":
+                from .notifications import BatteryNotificationPolicy
+                policy = BatteryNotificationPolicy()
+                output = policy.get_state()
+            else:
+                output = {"enabled": args.action == "on"}
         elif args.command == "anc":
             if args.mode == "status":
                 status = query_status(args.device)

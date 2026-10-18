@@ -47,6 +47,7 @@ BarWidget {
   readonly property bool gameModeEnabled: !!(snapshot && snapshot.feature_switches
     && (snapshot.feature_switches.game_mode === true
         || snapshot.feature_switches.low_latency === true))
+  property bool notificationsEnabled: true
   readonly property bool useTwoColumnLayout: eqAvailable
     && popup.availableCardWidth >= Style.space(560)
   readonly property int panelHeight: popup.contentHeight
@@ -176,6 +177,15 @@ BarWidget {
     pendingMode = nextState ? "game_on" : "game_off"
     pendingKind = "game_mode"
     outcome = ""
+  }
+
+  function toggleNotifications() {
+    notificationsEnabled = !notificationsEnabled
+    if (budsService) budsService.setNotifications(notificationsEnabled)
+  }
+
+  function testNotification() {
+    if (budsService) budsService.testNotification()
   }
 
   function selectEq(value) {
@@ -483,7 +493,7 @@ BarWidget {
               id: featureColumn
               width: noiseColumn.width
               spacing: Style.space(5)
-              visible: root.gameModeAvailable
+              visible: root.gameModeAvailable || true
 
               Text {
                 width: parent.width
@@ -510,11 +520,34 @@ BarWidget {
                 accent: Color.accent
                 fontFamily: root.bar.fontFamily
                 focusable: true
+                visible: root.gameModeAvailable
                 onActiveFocusChanged: if (activeFocus) panelScroll.reveal(this)
                 Keys.onDownPressed: nextItemInFocusChain().forceActiveFocus(Qt.TabFocusReason)
                 Keys.onUpPressed: nextItemInFocusChain(false).forceActiveFocus(Qt.BacktabFocusReason)
                 Keys.onEscapePressed: root.close()
                 onClicked: root.toggleGameMode()
+              }
+
+              Button {
+                id: notifyButton
+                width: featureColumn.width
+                height: Math.max(implicitHeight, Style.space(32))
+                text: root.notificationsEnabled ? "󰂃  Battery Alerts (20% & 10%)" : "󰂃  Battery Alerts (Off)"
+                selected: root.notificationsEnabled
+                bordered: true
+                leftAlign: true
+                enabled: root.connection === "connected"
+                opacity: enabled ? 1.0 : 0.5
+                foreground: root.bar.foreground
+                background: root.bar.background
+                accent: Color.accent
+                fontFamily: root.bar.fontFamily
+                focusable: true
+                onActiveFocusChanged: if (activeFocus) panelScroll.reveal(this)
+                Keys.onDownPressed: nextItemInFocusChain().forceActiveFocus(Qt.TabFocusReason)
+                Keys.onUpPressed: nextItemInFocusChain(false).forceActiveFocus(Qt.BacktabFocusReason)
+                Keys.onEscapePressed: root.close()
+                onClicked: root.toggleNotifications()
               }
             }
           }
@@ -880,6 +913,26 @@ BarWidget {
       return "ok"
     }
 
+    function testNotification(): string {
+      root.testNotification()
+      return "ok"
+    }
+
+    function setNotifications(enabled: string): string {
+      var val = (enabled === "true" || enabled === "1" || enabled === "on")
+      root.notificationsEnabled = val
+      if (root.budsService) root.budsService.setNotifications(val)
+      return "ok"
+    }
+
+    function notifyStatus(): string {
+      return JSON.stringify({
+        enabled: root.notificationsEnabled,
+        warning_threshold: 20,
+        critical_threshold: 10
+      })
+    }
+
     function status(): string {
       return JSON.stringify({
         service: root.budsService !== null,
@@ -901,6 +954,7 @@ BarWidget {
         current_anc: root.currentAncMode,
         game_mode: root.gameModeEnabled,
         game_mode_available: root.gameModeAvailable,
+        notifications_enabled: root.notificationsEnabled,
         pending: root.pendingRequestId >= 0,
         eq: root.eqStatus,
         compatibility: root.compatibilityKind,

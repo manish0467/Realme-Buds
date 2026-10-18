@@ -95,6 +95,18 @@ Item {
     return request("game_mode_status", {})
   }
 
+  function notifyStatus() {
+    return request("notify_status", {})
+  }
+
+  function setNotifications(enabled) {
+    return request("set_notify", { enabled: !!enabled })
+  }
+
+  function testNotification() {
+    return request("test_notification", {})
+  }
+
   function eqStatus() {
     return request("eq_status", {})
   }

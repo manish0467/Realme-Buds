@@ -11,6 +11,7 @@ from .availability import Availability
 from .controller import BudsController
 from .timing import AncRequestError
 from .models import ControllerSnapshot, ControlResult, EqControlResult
+from .notifications import NotificationEvent
 from .profiles import compatibility_for_product, profile_for_product
 from .report import build_snapshot_report, write_report
 from .service import BudsServiceRunner, ServiceState
@@ -72,7 +73,11 @@ class BudsFrontendBridge:
             poll_interval=poll_interval,
             on_state=self._on_state,
             on_snapshot=self._on_snapshot,
+            on_notification=self._on_notification,
         )
+
+    def _on_notification(self, event: NotificationEvent) -> None:
+        self.dispatch(lambda: self.emit({"type": "notification", "notification": event.to_dict()}))
 
     def run(self, cancelled: Event) -> ControllerSnapshot:
         """Run the service lifecycle until the caller signals cancellation."""
@@ -160,6 +165,21 @@ class BudsFrontendBridge:
                 success, snapshot = self.controller.set_game_mode_with_snapshot(enabled)
                 result = {"game_mode": enabled, "success": success}
                 self._on_snapshot(snapshot)
+            elif command == "notify_status":
+                self._require_parameters(command, params, set())
+                result = self.runner.notification_policy.get_state()
+            elif command == "set_notify":
+                self._require_parameters(command, params, {"enabled"})
+                enabled = params["enabled"]
+                if not isinstance(enabled, bool):
+                    raise ValueError("set_notify parameter 'enabled' must be a boolean")
+                self.runner.notification_policy.enabled = enabled
+                result = {"enabled": enabled}
+            elif command == "test_notification":
+                self._require_parameters(command, params, set())
+                model_name = self.controller.snapshot().status.model if self.controller.snapshot().status else "realme Buds"
+                event = self.runner.notification_policy.send_test_notification(model_name=model_name or "realme Buds")
+                result = {"sent": True, "event": event.to_dict()}
             elif command == "save_diagnostic_report":
                 self._require_parameters(command, params, {"path"})
                 path = params["path"]
