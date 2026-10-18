@@ -26,9 +26,13 @@ Discovery uses the system `dbus-python` binding already supplied by Omarchy/Arch
 ## Commands
 
 Run from the repository root during development. The executable `./realme-buds`
-provides the same interface without setting PYTHONPATH. Disable the Omarchy
-plugin before running queries or writes so it does not compete for RFCOMM; re-enable
-it afterward. See the root README for dependency and installation instructions.
+provides the same interface without setting PYTHONPATH. When `--device` is not
+supplied, several commands can delegate through `omarchy-shell` to a running
+plugin session (`status`, `anc cycle`, `game`, `notify`, `wear`, `multipoint`,
+`find`, and `gesture`). Commands that always open their own RFCOMM session
+(`diagnostics`, `capabilities`, and `eq`), and any command used with `--device`,
+should be run with the Omarchy plugin disabled, then re-enabled afterward.
+See the root README for dependency and installation instructions.
 
 Equivalent module invocations:
 
@@ -37,12 +41,21 @@ PYTHONPATH=src python3 -m realme_buds.cli devices
 PYTHONPATH=src python3 -m realme_buds.cli status
 PYTHONPATH=src python3 -m realme_buds.cli capabilities
 PYTHONPATH=src python3 -m realme_buds.cli anc status
+PYTHONPATH=src python3 -m realme_buds.cli anc cycle
 PYTHONPATH=src python3 -m realme_buds.cli anc off
 PYTHONPATH=src python3 -m realme_buds.cli anc transparency
 PYTHONPATH=src python3 -m realme_buds.cli anc on
 PYTHONPATH=src python3 -m realme_buds.cli eq status
 PYTHONPATH=src python3 -m realme_buds.cli eq list
 PYTHONPATH=src python3 -m realme_buds.cli eq set bass
+PYTHONPATH=src python3 -m realme_buds.cli eq custom 7 2 1 0 -1 -2
+PYTHONPATH=src python3 -m realme_buds.cli game toggle
+PYTHONPATH=src python3 -m realme_buds.cli notify test
+PYTHONPATH=src python3 -m realme_buds.cli wear mpris-status
+PYTHONPATH=src python3 -m realme_buds.cli multipoint status
+PYTHONPATH=src python3 -m realme_buds.cli find both
+PYTHONPATH=src python3 -m realme_buds.cli gesture list
+PYTHONPATH=src python3 -m realme_buds.cli gesture set left double_tap next_track
 PYTHONPATH=src python3 -m realme_buds.cli diagnostics --report
 ```
 

@@ -3,7 +3,7 @@
 A native Omarchy bar widget and Linux backend for realme earbuds. Check battery
 levels, switch noise control modes, and tweak native EQ presets from a compact, theme-aware panel.
 
-**Status: 0.1.0 release candidate.** realme Buds T310 has hardware-verified basic controls and native EQ.
+**Status: 0.2.0.** realme Buds T310 has hardware-verified basic controls and native EQ.
 This is an independent project, unaffiliated with realme or OPPO.
 
 ## What works
@@ -82,7 +82,7 @@ omarchy plugin enable realme-buds.control --section right
 ```
 
 If the installer offers to enable immediately, decline until the dependency check
-passes. This is a release candidate; no tagged release is available yet.
+passes.
 
 For an existing local checkout, copy it into the user plugin directory without
 Git internals or caches. The destination must not already exist:
@@ -144,9 +144,11 @@ retry fallback; phase-by-phase results are in the
 ## CLI and diagnostic reports
 
 The included executable needs no package installation. The `./realme-buds`
-command is provided. **Disable the plugin before running CLI queries or diagnostics**:
-both use the device's single RFCOMM control channel (channel 1 on realme Buds T310).
-Re-enable afterward to resume monitoring.
+command is provided. Commands such as `status`, `anc cycle`, `game`, `notify`,
+`wear`, `multipoint`, `find`, and `gesture` first try delegating through the
+running Omarchy plugin when `--device` is not supplied. Commands that open their
+own RFCOMM session (`diagnostics`, `capabilities`, `eq`, or any command with
+`--device`) should be run with the plugin disabled, then re-enabled afterward.
 
 ```bash
 # Direct cycle command (automatically uses fast running Omarchy session or standalone fallback)
