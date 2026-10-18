@@ -143,17 +143,28 @@ both use the device's single RFCOMM control channel (channel 1 on realme Buds T3
 Re-enable afterward to resume monitoring.
 
 ```bash
-omarchy plugin disable realme-buds.control
-./realme-buds devices
-./realme-buds status
+# Direct cycle command (automatically uses fast running Omarchy session or standalone fallback)
+./realme-buds anc cycle
+
+# Control noise cancellation directly
 ./realme-buds anc status
-./realme-buds anc set anc          # or: off, transparency
+./realme-buds anc on               # or: off, transparency
 ./realme-buds eq status
 ./realme-buds eq list
 ./realme-buds eq set balanced
 ./realme-buds diagnostics --report
-omarchy plugin enable realme-buds.control --section right
 ```
+
+### Global Hyprland Hotkey
+
+You can cycle ANC modes on the fly (`Off` → `Transparency` → `Noise Cancellation`) with the default hotkey:
+- **`SUPER + ALT + A`**: Cycle ANC modes instantly without opening the panel.
+
+Configured in `~/.config/hypr/bindings.lua`:
+```lua
+o.bind("SUPER + ALT + A", "Cycle Earbuds ANC", "omarchy-shell realme-buds.control cycleAnc")
+```
+
 
 Use `./realme-buds --help` for all commands. Explicit selection puts
 `--device ADDRESS` before the command. `devices` prints Bluetooth addresses for

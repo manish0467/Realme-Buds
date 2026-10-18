@@ -145,6 +145,19 @@ BarWidget {
     outcome = ""
   }
 
+  function cycleAnc() {
+    if (!budsService || connection !== "connected" || pendingRequestId >= 0) return
+    var requestId = budsService.cycleAnc()
+    if (requestId === null) {
+      outcome = "Could not start request"
+      return
+    }
+    pendingRequestId = requestId
+    pendingMode = "cycle"
+    pendingKind = "anc"
+    outcome = ""
+  }
+
   function selectEq(value) {
     if (!budsService || connection !== "connected" || pendingRequestId >= 0) return
     var requestId = budsService.setEq(value)
@@ -785,6 +798,16 @@ BarWidget {
 
   IpcHandler {
     target: "realme-buds.control"
+
+    function cycleAnc(): string {
+      root.cycleAnc()
+      return "ok"
+    }
+
+    function setAnc(mode: string): string {
+      root.selectAnc(mode)
+      return "ok"
+    }
 
     function status(): string {
       return JSON.stringify({

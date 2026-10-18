@@ -155,6 +155,17 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(controller.anc_modes, ["transparency"])
         self.assertEqual(emitted[-1]["type"], "snapshot")
 
+    def test_cycle_anc_command_executes_and_emits_snapshot(self):
+        emitted = []
+        controller = FakeController()
+        bridge = BudsFrontendBridge(emitted.append, controller=controller)
+        response = bridge.execute("cycle_anc", request_id="cycle-1")
+        self.assertTrue(response["ok"])
+        self.assertEqual(response["result"]["anc"], "transparency")
+        self.assertEqual(controller.anc_modes, ["transparency"])
+        self.assertEqual(len(emitted), 1)
+        self.assertEqual(emitted[0]["type"], "snapshot")
+
     def test_eq_commands_are_typed_verified_and_emit_fresh_state(self):
         emitted = []
         controller = FakeController()
@@ -257,6 +268,9 @@ class FakeController:
 
     def set_anc_with_snapshot(self, mode):
         return self.set_anc(mode), SNAPSHOT
+
+    def cycle_anc_with_snapshot(self):
+        return self.set_anc("transparency"), SNAPSHOT
 
     def eq_status(self):
         self.current_snapshot = EQ_SNAPSHOT

@@ -1,7 +1,8 @@
 import unittest
 from unittest.mock import patch
 
-from realme_buds.backend import diagnostics_report, query_capabilities, query_feature_switches, read_status, set_anc
+from realme_buds.backend import (cycle_anc, diagnostics_report, query_capabilities,
+                                query_feature_switches, read_status, set_anc)
 from realme_buds.bluez import Device
 from realme_buds.models import StatusResult
 from realme_buds.profiles import PROFILES
@@ -110,6 +111,14 @@ class BackendTests(unittest.TestCase):
             result = set_anc("off")
         self.assertEqual(result["anc"], "off")
         self.assertEqual(result["set_status"], 14)
+
+    @patch("realme_buds.backend.set_anc", return_value={"anc": "off", "verified": True})
+    @patch("realme_buds.backend.read_status", return_value=STATUS_RESULT)
+    def test_cycle_anc_calls_set_anc_with_next_mode(self, _read, mock_set):
+        # STATUS_RESULT has anc="on"
+        res = cycle_anc()
+        self.assertEqual(res["anc"], "off")
+        mock_set.assert_called_once_with("off", None)
 
 
 class FakeTransport:

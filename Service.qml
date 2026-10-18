@@ -83,6 +83,10 @@ Item {
     return request("set_anc", { mode: String(mode || "") })
   }
 
+  function cycleAnc() {
+    return request("cycle_anc", {})
+  }
+
   function eqStatus() {
     return request("eq_status", {})
   }

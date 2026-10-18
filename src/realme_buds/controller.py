@@ -177,6 +177,42 @@ class BudsController:
                 **result.timings_ms, **timer.finish("controller_total"),
             }), snapshot
 
+    @staticmethod
+    def _next_anc_mode(current_mode: str | None, profile: object | None) -> str:
+        candidates = ("off", "transparency", "on")
+        if profile and hasattr(profile, "anc") and hasattr(profile.anc, "write_indices"):
+            modes = [m for m in candidates if m in profile.anc.write_indices]
+        else:
+            modes = list(candidates)
+        if not modes:
+            modes = list(candidates)
+
+        if current_mode in modes:
+            idx = modes.index(current_mode)
+            return modes[(idx + 1) % len(modes)]
+        elif current_mode in ("light", "medium", "deep", "smart"):
+            return "off" if "off" in modes else modes[0]
+        else:
+            return "transparency" if "transparency" in modes else modes[0]
+
+    def cycle_anc(self) -> ControlResult:
+        with self._lock:
+            product_id = self._status.product_id if self._status else None
+            profile = profile_for_product(product_id)
+            current_mode = self._status.anc if self._status else None
+            next_mode = self._next_anc_mode(current_mode, profile)
+            return self.set_anc(next_mode)
+
+    def cycle_anc_with_snapshot(self) -> tuple[ControlResult, ControllerSnapshot]:
+        timer = PhaseTimer()
+        with self._lock:
+            timer.mark("controller_lock_wait")
+            result = self.cycle_anc()
+            snapshot = self.snapshot()
+            return replace(result, timings_ms={
+                **result.timings_ms, **timer.finish("controller_total"),
+            }), snapshot
+
     def eq_status(self) -> EqStatusResult:
         with self._lock:
             self._require_running()

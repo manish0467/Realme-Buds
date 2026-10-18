@@ -3,9 +3,40 @@ from __future__ import annotations
 import argparse
 import json
 
-from .backend import (device_summary, diagnostics_report, query_capabilities, query_eq,
+import shutil
+import subprocess
+
+from .backend import (cycle_anc, device_summary, diagnostics_report, query_capabilities, query_eq,
                       query_status, set_anc, set_custom_eq, set_eq)
 from .bluez import connected_devices
+
+
+def _try_shell_cycle_anc() -> dict[str, object] | None:
+    if not shutil.which("omarchy-shell"):
+        return None
+    try:
+        proc = subprocess.run(
+            ["omarchy-shell", "realme-buds.control", "cycleAnc"],
+            capture_output=True,
+            text=True,
+            timeout=2.0,
+        )
+        if proc.returncode == 0:
+            proc_status = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "status"],
+                capture_output=True,
+                text=True,
+                timeout=1.0,
+            )
+            if proc_status.returncode == 0:
+                data = json.loads(proc_status.stdout)
+                return {
+                    "anc": data.get("current_anc"),
+                    "verified": True,
+                }
+    except Exception:
+        pass
+    return None
 
 
 def main() -> None:
@@ -20,7 +51,7 @@ def main() -> None:
     anc_parser = subparsers.add_parser("anc", help="query or safely set ANC state")
     anc_parser.add_argument(
         "mode",
-        choices=("status", "on", "off", "transparency", "light", "medium", "deep", "smart"),
+        choices=("status", "on", "off", "transparency", "light", "medium", "deep", "smart", "cycle"),
     )
     eq_parser = subparsers.add_parser("eq", help="query or safely set native earbud EQ")
     eq_commands = eq_parser.add_subparsers(dest="eq_command", required=True)
@@ -63,6 +94,9 @@ def main() -> None:
         elif args.mode == "status":
             status = query_status(args.device)
             output = {"anc": status["anc"], "anc_level": status["anc_level"]}
+        elif args.mode == "cycle":
+            shell_res = _try_shell_cycle_anc() if args.device is None else None
+            output = shell_res if shell_res is not None else cycle_anc(args.device)
         else:
             output = set_anc(args.mode, args.device)
         print(json.dumps(output, indent=2))

@@ -239,6 +239,28 @@ def set_anc(mode: str, address: str | None = None) -> dict[str, object]:
     return write_anc(mode, address).to_dict()
 
 
+def cycle_anc(address: str | None = None) -> dict[str, object]:
+    status = read_status(address)
+    profile = profile_for_product(status.product_id)
+    candidates = ("off", "transparency", "on")
+    if profile and profile.anc and profile.anc.write_indices:
+        modes = [m for m in candidates if m in profile.anc.write_indices]
+    else:
+        modes = list(candidates)
+    if not modes:
+        modes = list(candidates)
+
+    current_mode = status.anc
+    if current_mode in modes:
+        next_mode = modes[(modes.index(current_mode) + 1) % len(modes)]
+    elif current_mode in ("light", "medium", "deep", "smart"):
+        next_mode = "off" if "off" in modes else modes[0]
+    else:
+        next_mode = "transparency" if "transparency" in modes else modes[0]
+
+    return set_anc(next_mode, address)
+
+
 def read_eq(address: str | None = None) -> EqStatusResult:
     device = select_device(address)
     session, _status, _events = OpoSession.bootstrap(device)

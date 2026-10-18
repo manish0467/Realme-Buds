@@ -57,6 +57,32 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(second.enters, 1)
         controller.shutdown()
 
+    def test_cycle_anc_transitions_off_transparency_on_off(self):
+        session = FakeSession()
+        controller = BudsController(FakeBackend([session]))
+        controller.start()
+        # initial STATUS has anc="off"
+        res1 = controller.cycle_anc()
+        self.assertEqual(res1.anc, "transparency")
+        self.assertEqual(controller.snapshot().status.anc, "transparency")
+
+        res2 = controller.cycle_anc()
+        self.assertEqual(res2.anc, "on")
+        self.assertEqual(controller.snapshot().status.anc, "on")
+
+        res3, snap3 = controller.cycle_anc_with_snapshot()
+        self.assertEqual(res3.anc, "off")
+        self.assertEqual(snap3.status.anc, "off")
+
+    def test_cycle_anc_from_level_resets_to_off(self):
+        from dataclasses import replace
+        session = FakeSession()
+        controller = BudsController(FakeBackend([session]))
+        controller.start()
+        controller._status = replace(controller._status, anc="on", anc_level="deep")
+        res = controller.cycle_anc()
+        self.assertEqual(res.anc, "off")
+
     def test_poll_reconnects_once_after_transport_error(self):
         failed = FakeSession(polls=[OSError(5, "disconnected")])
         replacement = FakeSession(
@@ -182,6 +208,19 @@ class FakeSession:
 
     def set_feature_switch(self, feature, enabled):
         return True, EventBatch((SafeEvent("feature_switches", {str(feature): enabled}),), 0)
+
+    def set_anc(self, mode):
+        return (
+            ControlResult(
+                name=DEVICE.name,
+                product_id="063C12",
+                anc=mode,
+                anc_level=None,
+                set_status=0,
+                verified=True,
+            ),
+            EventBatch((SafeEvent("anc", {"mode": mode, "level": None}),), 0),
+        )
 
     def poll(self, _wait):
         item = self.polls.pop(0) if self.polls else EventBatch((), 0)

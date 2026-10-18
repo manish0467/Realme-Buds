@@ -117,6 +117,11 @@ class BudsFrontendBridge:
                 control, snapshot = self.controller.set_anc_with_snapshot(mode)
                 result = self._serialize_control(control)
                 self._on_snapshot(snapshot)
+            elif command == "cycle_anc":
+                self._require_parameters(command, params, set())
+                control, snapshot = self.controller.cycle_anc_with_snapshot()
+                result = self._serialize_control(control)
+                self._on_snapshot(snapshot)
             elif command == "eq_status":
                 self._require_parameters(command, params, set())
                 result = self.controller.eq_status().to_dict()

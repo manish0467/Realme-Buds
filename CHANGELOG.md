@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Day 1 - Completed ✅)
+- ANC Cycle CLI command (`./realme-buds anc cycle`) with automatic fast Omarchy shell session reuse and standalone RFCOMM fallback.
+- Quickshell IPC endpoint `cycleAnc` on `realme-buds.control` for sub-200ms noise control toggling.
+- Hyprland default hotkey binding (`SUPER + ALT + A`) configured in `~/.config/hypr/bindings.lua`.
+- `cycle_anc` and `cycle_anc_with_snapshot` methods on `BudsController` and `BudsFrontendBridge`.
+
 ### Planned (Daily Shipping Roadmap)
-- **Day 1**: ANC Cycle CLI command (`./realme-buds anc cycle`) and Hyprland global hotkey integration.
 - **Day 2**: 45ms Low Latency Game Mode toggle (`./realme-buds game status|on|off`) and panel switch.
 - **Day 3**: Battery threshold notifications (20% warning, 10% critical) with anti-spam discharge tracking.
 - **Day 4**: In-ear wear detection toggle and desktop MPRIS auto-pause hook.

@@ -67,6 +67,7 @@ class PluginScaffoldTests(unittest.TestCase):
         self.assertNotIn("__sourceDir", service)
         self.assertIn('helper.write(JSON.stringify({', service)
         self.assertIn("helper.running = false", service)
+        self.assertIn("function cycleAnc()", service)
         self.assertNotIn("IpcHandler", service)
 
     def test_status_widget_resolves_shared_service_and_uses_native_primitives(self):
@@ -92,6 +93,7 @@ class PluginScaffoldTests(unittest.TestCase):
         self.assertEqual(widget.count("IpcHandler {"), 1)
         self.assertIn('target: "realme-buds.control"', widget)
         self.assertIn("function status(): string", widget)
+        self.assertIn("function cycleAnc(): string", widget)
         self.assertIn("visible: true", widget)
 
     @unittest.skipUnless(shutil.which("node"), "node is needed for JavaScript model tests")
