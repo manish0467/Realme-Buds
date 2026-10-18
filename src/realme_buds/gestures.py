@@ -226,9 +226,14 @@ def encode_set_gesture_payload(side: str, trigger: str, action: str) -> bytes:
     return bytes((side_id, 1, trigger_id, action_id))
 
 
-GESTURES_CONFIG_DIR = Path.home() / ".config" / "omarchy" / "realme-buds"
+_BASE_CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config"))
+GESTURES_CONFIG_DIR = _BASE_CONFIG_DIR / "omarchy" / "realme-buds"
 GESTURES_CONFIG_PATH = GESTURES_CONFIG_DIR / "gestures.json"
-LEGACY_GESTURES_CONFIG_PATH = Path.home() / ".config" / "omarchy" / "plugins" / "realme-buds.control" / "gestures.json"
+_PLUGIN_ROOT = Path(__file__).resolve().parent.parent.parent
+LEGACY_GESTURES_CONFIG_PATHS = (
+    _PLUGIN_ROOT / "gestures.json",
+    _BASE_CONFIG_DIR / "omarchy" / "plugins" / "realme-buds.control" / "gestures.json",
+)
 
 
 class GestureStore:
@@ -239,23 +244,25 @@ class GestureStore:
 
     def load(self, fallback: GestureConfig | None = None) -> GestureConfig:
         config = fallback or default_gesture_config()
-        if not self.config_path.exists() and self.config_path == GESTURES_CONFIG_PATH and LEGACY_GESTURES_CONFIG_PATH.exists():
-            try:
-                data = json.loads(LEGACY_GESTURES_CONFIG_PATH.read_text(encoding="utf-8"))
-                legacy_config = config
-                for trigger, action in data.get("left", {}).items():
-                    if action in ACTION_DEFINITIONS and trigger in ("double_tap", "triple_tap", "long_press"):
-                        legacy_config = legacy_config.with_action("left", trigger, action)
-                for trigger, action in data.get("right", {}).items():
-                    if action in ACTION_DEFINITIONS and trigger in ("double_tap", "triple_tap", "long_press"):
-                        legacy_config = legacy_config.with_action("right", trigger, action)
-                if "long_press_anc_modes" in data:
-                    legacy_config = legacy_config.with_anc_modes(tuple(data["long_press_anc_modes"]))
-                self.save(legacy_config)
-                LEGACY_GESTURES_CONFIG_PATH.unlink(missing_ok=True)
-                return legacy_config
-            except Exception:
-                pass
+        if not self.config_path.exists() and self.config_path == GESTURES_CONFIG_PATH:
+            for legacy_path in LEGACY_GESTURES_CONFIG_PATHS:
+                if legacy_path.exists():
+                    try:
+                        data = json.loads(legacy_path.read_text(encoding="utf-8"))
+                        legacy_config = config
+                        for trigger, action in data.get("left", {}).items():
+                            if action in ACTION_DEFINITIONS and trigger in ("double_tap", "triple_tap", "long_press"):
+                                legacy_config = legacy_config.with_action("left", trigger, action)
+                        for trigger, action in data.get("right", {}).items():
+                            if action in ACTION_DEFINITIONS and trigger in ("double_tap", "triple_tap", "long_press"):
+                                legacy_config = legacy_config.with_action("right", trigger, action)
+                        if "long_press_anc_modes" in data:
+                            legacy_config = legacy_config.with_anc_modes(tuple(data["long_press_anc_modes"]))
+                        self.save(legacy_config)
+                        legacy_path.unlink(missing_ok=True)
+                        return legacy_config
+                    except Exception:
+                        pass
         if not self.config_path.exists():
             return config
         try:
@@ -282,7 +289,9 @@ class GestureStore:
             self.config_path.parent.mkdir(parents=True, exist_ok=True)
             with open(self.config_path, "w", encoding="utf-8") as f:
                 json.dump(config.to_dict(), f, indent=2)
-            if self.config_path == GESTURES_CONFIG_PATH and LEGACY_GESTURES_CONFIG_PATH.exists():
-                LEGACY_GESTURES_CONFIG_PATH.unlink(missing_ok=True)
+            if self.config_path == GESTURES_CONFIG_PATH:
+                for legacy_path in LEGACY_GESTURES_CONFIG_PATHS:
+                    if legacy_path.exists():
+                        legacy_path.unlink(missing_ok=True)
         except Exception:
             pass

@@ -1,14 +1,20 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Sequence
 
 DEFAULT_FREQUENCIES = (64, 250, 1000, 4000, 8000, 16000)
-CONFIG_DIR = Path.home() / ".config" / "omarchy" / "realme-buds"
+_BASE_CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config"))
+CONFIG_DIR = _BASE_CONFIG_DIR / "omarchy" / "realme-buds"
 CONFIG_PATH = CONFIG_DIR / "custom_eq.json"
-LEGACY_CONFIG_PATH = Path.home() / ".config" / "omarchy" / "plugins" / "realme-buds.control" / "custom_eq.json"
+_PLUGIN_ROOT = Path(__file__).resolve().parent.parent.parent
+LEGACY_CONFIG_PATHS = (
+    _PLUGIN_ROOT / "custom_eq.json",
+    _BASE_CONFIG_DIR / "omarchy" / "plugins" / "realme-buds.control" / "custom_eq.json",
+)
 
 
 @dataclass(frozen=True)
@@ -113,14 +119,16 @@ class CustomEqStore:
         }
 
     def load(self) -> dict[str, object]:
-        if not self.path.exists() and self.path == CONFIG_PATH and LEGACY_CONFIG_PATH.exists():
-            try:
-                data = json.loads(LEGACY_CONFIG_PATH.read_text(encoding="utf-8"))
-                self.save(data)
-                LEGACY_CONFIG_PATH.unlink(missing_ok=True)
-                return data
-            except Exception:
-                pass
+        if not self.path.exists() and self.path == CONFIG_PATH:
+            for legacy_path in LEGACY_CONFIG_PATHS:
+                if legacy_path.exists():
+                    try:
+                        data = json.loads(legacy_path.read_text(encoding="utf-8"))
+                        self.save(data)
+                        legacy_path.unlink(missing_ok=True)
+                        return data
+                    except Exception:
+                        pass
         if not self.path.exists():
             return self._default_data()
         try:
@@ -137,8 +145,10 @@ class CustomEqStore:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with open(self.path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
-            if self.path == CONFIG_PATH and LEGACY_CONFIG_PATH.exists():
-                LEGACY_CONFIG_PATH.unlink(missing_ok=True)
+            if self.path == CONFIG_PATH:
+                for legacy_path in LEGACY_CONFIG_PATHS:
+                    if legacy_path.exists():
+                        legacy_path.unlink(missing_ok=True)
         except Exception:
             pass
 
