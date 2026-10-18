@@ -31,9 +31,36 @@ Item {
   }
 
   function startHelper() {
+    restartTimer.stop()
     if (!stopping && helperPath && !helper.running) {
       helper.command = [helperPath]
       helper.running = true
+    }
+  }
+
+  function restartHelper() {
+    helper.running = false
+    startHelper()
+  }
+
+  function reconnect() {
+    startHelper()
+  }
+
+  onManifestChanged: {
+    if (!stopping && !helper.running) {
+      startHelper()
+    }
+  }
+
+  Timer {
+    id: restartTimer
+    interval: 2000
+    repeat: false
+    onTriggered: {
+      if (!root.stopping && !helper.running) {
+        root.startHelper()
+      }
     }
   }
 
@@ -61,7 +88,10 @@ Item {
   }
 
   function request(command, parameters) {
-    if (!helper.running) return null
+    if (!helper.running) {
+      startHelper()
+      return null
+    }
     var requestId = nextRequestId++
     helper.write(JSON.stringify({
       request_id: requestId,
@@ -214,6 +244,7 @@ Item {
           lastResponse: root.state.lastResponse,
           lastError: root.state.lastError || "Backend process stopped"
         }
+        restartTimer.restart()
       }
     }
   }

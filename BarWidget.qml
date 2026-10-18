@@ -460,7 +460,14 @@ BarWidget {
     hoverEnabled: true
     acceptedButtons: Qt.LeftButton
     cursorShape: Qt.PointingHandCursor
-    onClicked: root.popupOpen = !root.popupOpen
+    onClicked: {
+      if (root.connection === "stopped" || root.connection === "unavailable") {
+        if (root.budsService && typeof root.budsService.startHelper === "function") {
+          root.budsService.startHelper()
+        }
+      }
+      root.popupOpen = !root.popupOpen
+    }
     onEntered: {
       collapseTimer.stop()
       root.hoverExpanded = true
@@ -1521,6 +1528,22 @@ BarWidget {
 
     function gestureStatus(): string {
       return JSON.stringify(root.gesturesData)
+    }
+
+    function reconnect(): string {
+      if (root.budsService && typeof root.budsService.startHelper === "function") {
+        root.budsService.startHelper()
+        return "ok"
+      }
+      return "service_unavailable"
+    }
+
+    function restart(): string {
+      if (root.budsService && typeof root.budsService.restartHelper === "function") {
+        root.budsService.restartHelper()
+        return "ok"
+      }
+      return "service_unavailable"
     }
 
     function status(): string {
