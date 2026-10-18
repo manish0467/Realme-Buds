@@ -32,6 +32,7 @@ function applyMessage(state, message) {
     next.lastError = message.error ? String(message.error) : ""
   } else if (message.type === "snapshot") {
     next.snapshot = message.snapshot || null
+    next.lastError = ""
   } else if (message.type === "command_response") {
     next.lastResponse = message
     next.lastError = message.ok === false && message.error
