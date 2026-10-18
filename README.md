@@ -6,6 +6,12 @@ levels, switch noise control modes, and tweak native EQ presets from a compact, 
 **Status: 0.1.0 release candidate.** realme Buds T310 has hardware-verified basic controls and native EQ.
 This is an independent project, unaffiliated with realme or OPPO.
 
+## Wiki
+
+A repository wiki starter is available in [`/wiki`](wiki), including Home,
+setup, compatibility/features, CLI reference, troubleshooting, and development
+pages.
+
 ## What works
 
 - Automatic selection of one connected compatible realme device.
