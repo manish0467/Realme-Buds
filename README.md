@@ -3,7 +3,7 @@
 A native Omarchy bar widget and Linux backend for realme earbuds. Check battery
 levels, switch noise control modes, and tweak native EQ presets from a compact, theme-aware panel.
 
-**Status: 0.2.0.** realme Buds T310 has hardware-verified basic controls and native EQ.
+**Status: 0.2.1.** realme Buds T310 has hardware-verified basic controls and native EQ.
 This is an independent project, unaffiliated with realme or OPPO.
 
 ## Wiki
