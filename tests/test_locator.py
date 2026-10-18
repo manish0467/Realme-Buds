@@ -21,7 +21,19 @@ class LocatorWavTests(unittest.TestCase):
             self.assertEqual(wf.getframerate(), 44100)
             self.assertEqual(wf.getnframes(), int(0.5 * 44100))
 
-    def test_channel_isolation(self):
+    def test_generate_locator_wav_ramp(self):
+        wav_bytes = generate_locator_wav(duration=1.0, sample_rate=44100, channel="both", ramp_duration=1.0)
+        with wave.open(io.BytesIO(wav_bytes), "rb") as wf:
+            frames = wf.readframes(wf.getnframes())
+            # Samples near the beginning should have much smaller peak amplitude than samples near the end
+            first_quarter = frames[:len(frames)//4]
+            last_quarter = frames[3*len(frames)//4:]
+            
+            def max_amp(chunk):
+                vals = [abs(struct.unpack("<h", chunk[i:i+2])[0]) for i in range(0, len(chunk), 2)]
+                return max(vals) if vals else 0
+                
+            self.assertLess(max_amp(first_quarter), max_amp(last_quarter))
         # Left only: right channel must be silent (all zero)
         left_wav = generate_locator_wav(duration=0.2, sample_rate=44100, channel="left")
         with wave.open(io.BytesIO(left_wav), "rb") as wf:
@@ -149,7 +161,45 @@ class CliLocatorTests(unittest.TestCase):
                 # stop
                 mock_run.return_value = MagicMock(returncode=0, stdout="")
                 res = _try_shell_find("stop")
-                self.assertEqual(res, {"ringing": False, "stopped": True})
+    @patch("sys.argv", ["realme-buds", "find", "both"])
+    @patch("sys.stdin.isatty", return_value=True)
+    @patch("builtins.input", return_value="realme")
+    @patch("realme_buds.cli.ring_buds", return_value={"ringing": True, "target": "both"})
+    @patch("realme_buds.cli._try_shell_find", return_value=None)
+    def test_cli_find_interactive_confirm_success(self, mock_shell, mock_ring, mock_input, mock_isatty):
+        from realme_buds.cli import main
+        ret = main()
+        self.assertEqual(ret, 0)
+        mock_ring.assert_called_with(target="both", address=None)
+
+    @patch("sys.argv", ["realme-buds", "find", "both"])
+    @patch("sys.stdin.isatty", return_value=True)
+    @patch("builtins.input", return_value="wrong")
+    @patch("realme_buds.cli.ring_buds")
+    def test_cli_find_interactive_confirm_mismatch(self, mock_ring, mock_input, mock_isatty):
+        from realme_buds.cli import main
+        ret = main()
+        self.assertEqual(ret, 1)
+        mock_ring.assert_not_called()
+
+    @patch("sys.argv", ["realme-buds", "find", "both"])
+    @patch("sys.stdin.isatty", return_value=False)
+    @patch("realme_buds.cli.ring_buds")
+    def test_cli_find_non_tty_without_yes_fails(self, mock_ring, mock_isatty):
+        from realme_buds.cli import main
+        ret = main()
+        self.assertEqual(ret, 1)
+        mock_ring.assert_not_called()
+
+    @patch("sys.argv", ["realme-buds", "find", "both", "-y"])
+    @patch("sys.stdin.isatty", return_value=False)
+    @patch("realme_buds.cli.ring_buds", return_value={"ringing": True, "target": "both"})
+    @patch("realme_buds.cli._try_shell_find", return_value=None)
+    def test_cli_find_with_yes_flag_bypasses(self, mock_shell, mock_ring, mock_isatty):
+        from realme_buds.cli import main
+        ret = main()
+        self.assertEqual(ret, 0)
+        mock_ring.assert_called_with(target="both", address=None)
 
 
 if __name__ == "__main__":

@@ -47,10 +47,16 @@ def find_bluetooth_sink(address: Optional[str] = None) -> Optional[str]:
     return None
 
 
-def generate_locator_wav(duration: float = 2.0, sample_rate: int = 44100, channel: str = "both") -> bytes:
+def generate_locator_wav(
+    duration: float = 2.0,
+    sample_rate: int = 44100,
+    channel: str = "both",
+    ramp_duration: float = 0.0,
+) -> bytes:
     """Synthesize a loud acoustic locator chirp WAV (2.2kHz -> 3.8kHz sweep).
     
     channel can be 'left', 'right', or 'both'.
+    If ramp_duration > 0, volume ramps smoothly from 15% to 100% over ramp_duration seconds.
     """
     num_samples = int(duration * sample_rate)
     buffer = io.BytesIO()
@@ -83,8 +89,12 @@ def generate_locator_wav(duration: float = 2.0, sample_rate: int = 44100, channe
                     decay_t = chirp_len - cycle_t
                     envelope = 0.5 * (1.0 - math.cos(math.pi * decay_t / attack))
 
-                # Loud volume (near full 16-bit range)
-                val = int(28500.0 * envelope * math.sin(phase))
+                volume_scale = 1.0
+                if ramp_duration > 0.0 and t < ramp_duration:
+                    volume_scale = 0.15 + 0.85 * (t / ramp_duration)
+
+                # Scaled volume (15% to full 16-bit range)
+                val = int(28500.0 * volume_scale * envelope * math.sin(phase))
             else:
                 val = 0
 
@@ -109,7 +119,18 @@ class AcousticLocator:
         self._current_target: Optional[str] = None
         self._start_time: float = 0.0
         self._duration: float = 30.0
-        self._tmp_file: Optional[str] = None
+        self._tmp_files: list[str] = []
+
+    @property
+    def _tmp_file(self) -> Optional[str]:
+        return self._tmp_files[0] if self._tmp_files else None
+
+    @_tmp_file.setter
+    def _tmp_file(self, val: Optional[str]) -> None:
+        if val is None:
+            self._tmp_files.clear()
+        else:
+            self._tmp_files = [val]
 
     @property
     def is_ringing(self) -> bool:
@@ -146,46 +167,67 @@ class AcousticLocator:
             self._start_time = time.time()
             self._stop_event.clear()
 
-            # Generate chirp file
-            wav_bytes = generate_locator_wav(duration=2.0, channel=target)
-            fd, tmp_path = tempfile.mkstemp(prefix=f"realme_locate_{target}_", suffix=".wav")
-            os.write(fd, wav_bytes)
-            os.close(fd)
-            self._tmp_file = tmp_path
+            # 1. Generate gentle ramp-up chirp file (2.5s ramp from 15% to 100%)
+            ramp_bytes = generate_locator_wav(duration=2.5, channel=target, ramp_duration=2.5)
+            fd1, ramp_path = tempfile.mkstemp(prefix=f"realme_locate_ramp_{target}_", suffix=".wav")
+            os.write(fd1, ramp_bytes)
+            os.close(fd1)
+
+            # 2. Generate full-volume loop chirp file (2.0s at 100%)
+            loop_bytes = generate_locator_wav(duration=2.0, channel=target, ramp_duration=0.0)
+            fd2, loop_path = tempfile.mkstemp(prefix=f"realme_locate_loop_{target}_", suffix=".wav")
+            os.write(fd2, loop_bytes)
+            os.close(fd2)
+
+            self._tmp_files = [ramp_path, loop_path]
 
             # Launch background worker
             self._thread = threading.Thread(
                 target=self._worker_loop,
-                args=(tmp_path, target, duration, address or self.default_address),
+                args=(ramp_path, loop_path, target, duration, address or self.default_address),
                 daemon=True,
             )
             self._thread.start()
 
         return self.get_state()
 
-    def _worker_loop(self, tmp_path: str, target: str, duration: float, address: Optional[str]) -> None:
+    def _worker_loop(
+        self,
+        ramp_path: str,
+        loop_path: str,
+        target: str,
+        duration: float,
+        address: Optional[str],
+    ) -> None:
         target_sink = find_bluetooth_sink(address)
-        player_cmd: list[str] = []
+        player_cmd_base: list[str] = []
 
         if shutil.which("pw-play"):
-            player_cmd = ["pw-play"]
+            player_cmd_base = ["pw-play"]
             if target_sink:
-                player_cmd.extend(["--target", target_sink])
-            player_cmd.extend(["--volume", "1.0", tmp_path])
+                player_cmd_base.extend(["--target", target_sink])
+            player_cmd_base.extend(["--volume", "1.0"])
         elif shutil.which("paplay"):
-            player_cmd = ["paplay"]
+            player_cmd_base = ["paplay"]
             if target_sink:
-                player_cmd.extend([f"--device={target_sink}"])
-            player_cmd.append(tmp_path)
+                player_cmd_base.extend([f"--device={target_sink}"])
         elif shutil.which("aplay"):
-            player_cmd = ["aplay", "-q", tmp_path]
+            player_cmd_base = ["aplay", "-q"]
         else:
             return
 
         end_time = time.time() + duration
         try:
+            # Stage 1: Play initial ramp chirp (gentle acoustic safety grace period)
+            if not self._stop_event.is_set():
+                proc = subprocess.Popen(player_cmd_base + [ramp_path])
+                with self._lock:
+                    self._proc = proc
+                proc.wait()
+
+            # Stage 2: Repeat full-volume locator sweep until timeout or cancelled
             while not self._stop_event.is_set() and time.time() < end_time:
-                proc = subprocess.Popen(player_cmd)
+                proc = subprocess.Popen(player_cmd_base + [loop_path])
                 with self._lock:
                     self._proc = proc
                 proc.wait()
@@ -202,12 +244,13 @@ class AcousticLocator:
                         pass
                     self._proc = None
                 self._current_target = None
-                if self._tmp_file and os.path.exists(self._tmp_file):
-                    try:
-                        os.unlink(self._tmp_file)
-                    except Exception:
-                        pass
-                    self._tmp_file = None
+                for path in self._tmp_files:
+                    if path and os.path.exists(path):
+                        try:
+                            os.unlink(path)
+                        except Exception:
+                            pass
+                self._tmp_files.clear()
 
     def stop(self) -> Dict[str, Any]:
         """Immediately stop playing the locator chime."""
@@ -220,12 +263,13 @@ class AcousticLocator:
                 except Exception:
                     pass
                 self._proc = None
-            if self._tmp_file and os.path.exists(self._tmp_file):
-                try:
-                    os.unlink(self._tmp_file)
-                except Exception:
-                    pass
-                self._tmp_file = None
+            for path in self._tmp_files:
+                if path and os.path.exists(path):
+                    try:
+                        os.unlink(path)
+                    except Exception:
+                        pass
+            self._tmp_files.clear()
             self._current_target = None
 
         if self._thread is not None and self._thread.is_alive():

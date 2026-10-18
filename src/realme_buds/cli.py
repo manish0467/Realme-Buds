@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
-
 import shutil
 import subprocess
+import sys
 
 from .backend import (cycle_anc, device_summary, diagnostics_report, query_capabilities, query_eq,
                       query_game_mode, query_gestures, query_multipoint, query_status, query_wear_detection, ring_buds,
@@ -488,6 +488,14 @@ def main() -> None:
         default="status",
         help="acoustic locator action: left, right, both, stop, status (default: status)",
     )
+    find_parser.add_argument(
+        "-y",
+        "--yes",
+        "--force",
+        action="store_true",
+        dest="yes",
+        help="bypass safety confirmation prompt to ring immediately",
+    )
     gesture_parser = subparsers.add_parser(
         "gesture",
         aliases=["touch"],
@@ -616,6 +624,22 @@ def main() -> None:
             else:
                 output = query_multipoint(args.device)
         elif args.command in ("find", "ring"):
+            if args.action in ("left", "right", "both") and not getattr(args, "yes", False):
+                if sys.stdin.isatty():
+                    print("⚠️  WARNING: Earbuds will emit a high-volume acoustic sweep.")
+                    print("    DO NOT wear earbuds while ringing!")
+                    try:
+                        confirm = input("Type 'realme' to confirm: ").strip().lower()
+                    except (KeyboardInterrupt, EOFError):
+                        print("\nAborted.")
+                        return 1
+                    if confirm != "realme":
+                        print("Confirmation failed (did not type 'realme'). Aborted.")
+                        return 1
+                else:
+                    print("Error: Acoustic locator requires confirmation. Re-run with -y or --yes to bypass prompt.", file=sys.stderr)
+                    return 1
+
             shell_res = _try_shell_find(args.action) if args.device is None else None
             if shell_res is not None:
                 output = shell_res
@@ -672,6 +696,7 @@ def main() -> None:
                 else:
                     output = query_gestures(args.device)
         print(json.dumps(output, indent=2))
+        return 0
     except (OSError, RuntimeError, ValueError) as error:
         parser.exit(1, f"realme-buds: {error}\n")
 

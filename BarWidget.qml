@@ -60,6 +60,7 @@ BarWidget {
   property bool locatorRinging: false
   property string locatorTarget: ""
   property bool locatorCardOpen: false
+  property string pendingRingTarget: ""
   readonly property bool gestureAvailable: !!(snapshot && snapshot.capabilities
     && snapshot.capabilities.indexOf("gestures") !== -1)
   readonly property var gesturesData: BarModel.gestures(snapshot)
@@ -253,8 +254,11 @@ BarWidget {
 
   function toggleLocatorCard() {
     locatorCardOpen = !locatorCardOpen
-    if (!locatorCardOpen && locatorRinging) {
-      stopRingBuds()
+    if (!locatorCardOpen) {
+      pendingRingTarget = ""
+      if (locatorRinging) {
+        stopRingBuds()
+      }
     }
   }
 
@@ -806,58 +810,153 @@ BarWidget {
                 id: locatorCard
                 width: featureColumn.width
                 visible: root.locatorCardOpen
-                spacing: Style.space(5)
+                spacing: Style.space(6)
 
-                Text {
+                Column {
                   width: parent.width
-                  text: "⚠️ Earbuds play a loud sound. Do NOT wear them!"
-                  textFormat: Text.PlainText
-                  color: root.bar.foreground
-                  font.family: root.bar.fontFamily
-                  font.pixelSize: Style.font.bodySmall
-                  font.bold: true
-                  wrapMode: Text.Wrap
+                  spacing: Style.space(5)
+                  visible: !root.locatorRinging && root.pendingRingTarget === ""
+
+                  Text {
+                    width: parent.width
+                    text: "Select earbud to ring:"
+                    textFormat: Text.PlainText
+                    color: root.bar.foreground
+                    font.family: root.bar.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                  }
+
+                  Row {
+                    width: parent.width
+                    spacing: Style.space(4)
+
+                    Button {
+                      width: (parent.width - Style.space(8)) / 3
+                      height: Math.max(implicitHeight, Style.space(28))
+                      text: "Left"
+                      bordered: true
+                      foreground: root.bar.foreground
+                      background: root.bar.background
+                      accent: Color.accent
+                      fontFamily: root.bar.fontFamily
+                      onClicked: root.pendingRingTarget = "left"
+                    }
+
+                    Button {
+                      width: (parent.width - Style.space(8)) / 3
+                      height: Math.max(implicitHeight, Style.space(28))
+                      text: "Right"
+                      bordered: true
+                      foreground: root.bar.foreground
+                      background: root.bar.background
+                      accent: Color.accent
+                      fontFamily: root.bar.fontFamily
+                      onClicked: root.pendingRingTarget = "right"
+                    }
+
+                    Button {
+                      width: (parent.width - Style.space(8)) / 3
+                      height: Math.max(implicitHeight, Style.space(28))
+                      text: "Both"
+                      bordered: true
+                      foreground: root.bar.foreground
+                      background: root.bar.background
+                      accent: Color.accent
+                      fontFamily: root.bar.fontFamily
+                      onClicked: root.pendingRingTarget = "both"
+                    }
+                  }
                 }
 
-                Row {
+                Column {
                   width: parent.width
-                  spacing: Style.space(4)
-                  visible: !root.locatorRinging
+                  spacing: Style.space(6)
+                  visible: !root.locatorRinging && root.pendingRingTarget !== ""
 
-                  Button {
-                    width: (parent.width - Style.space(8)) / 3
-                    height: Math.max(implicitHeight, Style.space(28))
-                    text: "Left"
-                    bordered: true
-                    foreground: root.bar.foreground
-                    background: root.bar.background
-                    accent: Color.accent
-                    fontFamily: root.bar.fontFamily
-                    onClicked: root.ringBuds("left")
+                  Text {
+                    width: parent.width
+                    text: "⚠️ Ear Safety Lock"
+                    textFormat: Text.PlainText
+                    color: Color.accent
+                    font.family: root.bar.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    font.bold: true
                   }
 
-                  Button {
-                    width: (parent.width - Style.space(8)) / 3
-                    height: Math.max(implicitHeight, Style.space(28))
-                    text: "Right"
-                    bordered: true
-                    foreground: root.bar.foreground
-                    background: root.bar.background
-                    accent: Color.accent
-                    fontFamily: root.bar.fontFamily
-                    onClicked: root.ringBuds("right")
+                  Text {
+                    width: parent.width
+                    text: "Earbuds will chirp at maximum volume! Take them OUT of your ears."
+                    textFormat: Text.PlainText
+                    color: root.bar.foreground
+                    font.family: root.bar.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    wrapMode: Text.Wrap
                   }
 
-                  Button {
-                    width: (parent.width - Style.space(8)) / 3
-                    height: Math.max(implicitHeight, Style.space(28))
-                    text: "Both"
-                    bordered: true
-                    foreground: root.bar.foreground
-                    background: root.bar.background
-                    accent: Color.accent
-                    fontFamily: root.bar.fontFamily
-                    onClicked: root.ringBuds("both")
+                  Row {
+                    width: parent.width
+                    spacing: Style.space(6)
+
+                    Text {
+                      text: "Type 'realme':"
+                      anchors.verticalCenter: parent.verticalCenter
+                      color: root.bar.foreground
+                      font.family: root.bar.fontFamily
+                      font.pixelSize: Style.font.bodySmall
+                      font.bold: true
+                    }
+
+                    Controls.TextField {
+                      id: ringConfirmInput
+                      width: parent.width - Style.space(95)
+                      placeholderText: "realme"
+                      font.pixelSize: Style.font.bodySmall
+                      Keys.onReturnPressed: {
+                        if (ringConfirmInput.text.trim().toLowerCase() === "realme") {
+                          root.ringBuds(root.pendingRingTarget)
+                          root.pendingRingTarget = ""
+                          ringConfirmInput.text = ""
+                        }
+                      }
+                    }
+                  }
+
+                  Row {
+                    width: parent.width
+                    spacing: Style.space(6)
+
+                    Button {
+                      width: (parent.width - Style.space(6)) / 2
+                      height: Math.max(implicitHeight, Style.space(28))
+                      text: "Cancel"
+                      bordered: true
+                      foreground: root.bar.foreground
+                      background: root.bar.background
+                      fontFamily: root.bar.fontFamily
+                      onClicked: {
+                        root.pendingRingTarget = ""
+                        ringConfirmInput.text = ""
+                      }
+                    }
+
+                    Button {
+                      width: (parent.width - Style.space(6)) / 2
+                      height: Math.max(implicitHeight, Style.space(28))
+                      text: "󰓛 Ring " + (root.pendingRingTarget === "both" ? "Both" : (root.pendingRingTarget === "left" ? "Left" : "Right"))
+                      enabled: ringConfirmInput.text.trim().toLowerCase() === "realme"
+                      opacity: enabled ? 1.0 : 0.4
+                      selected: enabled
+                      bordered: true
+                      foreground: root.bar.foreground
+                      background: root.bar.background
+                      accent: Color.accent
+                      fontFamily: root.bar.fontFamily
+                      onClicked: {
+                        root.ringBuds(root.pendingRingTarget)
+                        root.pendingRingTarget = ""
+                        ringConfirmInput.text = ""
+                      }
+                    }
                   }
                 }
 
@@ -1222,7 +1321,7 @@ BarWidget {
                 font.family: root.bar.fontFamily
                 font.pixelSize: Style.font.bodySmall
               }
-              TextField {
+              Controls.TextField {
                 id: customNameField
                 width: parent.width - Style.space(50)
                 text: root.selectedCustom ? root.selectedCustom.name : ""
