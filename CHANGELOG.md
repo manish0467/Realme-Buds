@@ -30,8 +30,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Quickshell IPC endpoints `testNotification`, `setNotifications`, and `notifyStatus`.
 - Interactive UI toggle button (`󰂃  Battery Alerts (20% & 10%)`) in the panel.
 
+### Added (Day 4 - Completed ✅)
+- In-ear capacitive wear detection support for realme Buds T310 (`063C12.json` with Feature `0x04`).
+- Native desktop MPRIS media auto-pause and auto-resume hook (`MprisManager` in `src/realme_buds/mpris.py`):
+  - Automatically queries playing media players on `org.mpris.MediaPlayer2.*` via user session D-Bus without external binaries.
+  - Pauses playing media when earbuds are placed in charging case or removed.
+  - Caches paused player bus names and selectively resumes only previously playing players when earbuds are re-inserted.
+- Integrated wear-transition detection tracking charging state changes in `BudsFrontendBridge`.
+- CLI commands: `./realme-buds wear status`, `./realme-buds wear on`, `./realme-buds wear off`, `./realme-buds wear toggle`, `./realme-buds wear mpris-on`, `./realme-buds wear mpris-off`, and `./realme-buds wear mpris-status`.
+- Quickshell IPC endpoints `setWearDetection`, `wearStatus`, `setMprisHook`, and `mprisHookStatus`.
+- Interactive UI toggle buttons in `BarWidget.qml` panel:
+  - `󰋋  In-Ear Detection` (enables/disables capacitive wear sensing on firmware).
+  - `󰐎  Auto-Pause Media` (enables/disables desktop MPRIS pause/resume hook).
+
 ### Planned (Daily Shipping Roadmap)
-- **Day 4**: In-ear wear detection toggle and desktop MPRIS auto-pause hook.
 - **Day 5**: Dual-device / Multipoint switch support.
 - **Day 6**: "Find My Buds" acoustic locator chime.
 - **Day 7**: Touch gesture remapping for physical tap controls.

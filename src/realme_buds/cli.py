@@ -7,7 +7,8 @@ import shutil
 import subprocess
 
 from .backend import (cycle_anc, device_summary, diagnostics_report, query_capabilities, query_eq,
-                      query_game_mode, query_status, set_anc, set_custom_eq, set_eq, set_game_mode)
+                      query_game_mode, query_status, query_wear_detection, set_anc, set_custom_eq, set_eq,
+                      set_game_mode, set_wear_detection)
 from .bluez import connected_devices
 
 
@@ -126,6 +127,71 @@ def _try_shell_notify(action: str) -> dict[str, object] | None:
     return None
 
 
+def _try_shell_wear(action: str) -> dict[str, object] | None:
+    if not shutil.which("omarchy-shell"):
+        return None
+    try:
+        if action == "status":
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "wearStatus"],
+                capture_output=True,
+                text=True,
+                timeout=1.5,
+            )
+            if proc.returncode == 0:
+                return json.loads(proc.stdout)
+        elif action == "toggle":
+            proc_status = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "wearStatus"],
+                capture_output=True,
+                text=True,
+                timeout=1.0,
+            )
+            if proc_status.returncode == 0:
+                data = json.loads(proc_status.stdout)
+                target = not bool(data.get("wear_detection", False))
+                proc = subprocess.run(
+                    ["omarchy-shell", "realme-buds.control", "setWearDetection", "true" if target else "false"],
+                    capture_output=True,
+                    text=True,
+                    timeout=2.0,
+                )
+                if proc.returncode == 0:
+                    return {"wear_detection": target, "verified": True}
+        elif action in ("on", "off"):
+            enabled = (action == "on")
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "setWearDetection", "true" if enabled else "false"],
+                capture_output=True,
+                text=True,
+                timeout=2.0,
+            )
+            if proc.returncode == 0:
+                return {"wear_detection": enabled, "verified": True}
+        elif action == "mpris-status":
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "mprisHookStatus"],
+                capture_output=True,
+                text=True,
+                timeout=1.5,
+            )
+            if proc.returncode == 0:
+                return json.loads(proc.stdout)
+        elif action in ("mpris-on", "mpris-off"):
+            enabled = (action == "mpris-on")
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "setMprisHook", "true" if enabled else "false"],
+                capture_output=True,
+                text=True,
+                timeout=2.0,
+            )
+            if proc.returncode == 0:
+                return {"mpris_hook": enabled, "verified": True}
+    except Exception:
+        pass
+    return None
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="realme-buds")
     parser.add_argument("--device", metavar="ADDRESS", help="select a connected device by Bluetooth address")
@@ -164,6 +230,14 @@ def main() -> None:
         nargs="?",
         default="status",
         help="query, configure, or test battery notifications (default: status)",
+    )
+    wear_parser = subparsers.add_parser("wear", help="query or configure in-ear wear detection and MPRIS auto-pause")
+    wear_parser.add_argument(
+        "action",
+        choices=("status", "on", "off", "toggle", "mpris-on", "mpris-off", "mpris-status"),
+        nargs="?",
+        default="status",
+        help="query or configure in-ear detection and MPRIS hook (default: status)",
     )
     args = parser.parse_args()
     try:
@@ -221,6 +295,25 @@ def main() -> None:
                 output = policy.get_state()
             else:
                 output = {"enabled": args.action == "on"}
+        elif args.command == "wear":
+            shell_res = _try_shell_wear(args.action) if args.device is None else None
+            if shell_res is not None:
+                output = shell_res
+            elif args.action == "status":
+                output = query_wear_detection(args.device)
+            elif args.action == "toggle":
+                curr = query_wear_detection(args.device)
+                next_val = not bool(curr.get("wear_detection", False))
+                output = set_wear_detection(next_val, args.device)
+            elif args.action in ("on", "off"):
+                output = set_wear_detection(args.action == "on", args.device)
+            elif args.action == "mpris-status":
+                from .mpris import MprisManager
+                output = MprisManager().get_state()
+            elif args.action in ("mpris-on", "mpris-off"):
+                output = {"mpris_hook": args.action == "mpris-on"}
+            else:
+                output = query_wear_detection(args.device)
         elif args.command == "anc":
             if args.mode == "status":
                 status = query_status(args.device)

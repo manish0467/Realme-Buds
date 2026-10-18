@@ -12,7 +12,8 @@
     "anc",
     "transparency",
     "eq",
-    "game_mode"
+    "game_mode",
+    "wear_detection"
   ],
   "anc": {
     "write_indices": {

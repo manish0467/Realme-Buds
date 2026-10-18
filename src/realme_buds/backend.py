@@ -25,6 +25,7 @@ from .protocol import (
     AncState,
     FEATURE_GAME_MODE,
     FEATURE_LOW_LATENCY,
+    FEATURE_WEAR_DETECTION,
     FEATURE_SWITCH_NAMES,
     Frame,
     format_firmware_version,
@@ -283,6 +284,22 @@ def set_game_mode(enabled: bool, address: str | None = None) -> dict[str, object
             except Exception:
                 pass
         return {"game_mode": enabled, "success": success}
+    finally:
+        session.__exit__(None, None, None)
+
+
+def query_wear_detection(address: str | None = None) -> dict[str, object]:
+    switches = query_feature_switches(address)
+    enabled = switches.get("wear_detection", False)
+    return {"wear_detection": enabled, "switches": switches}
+
+
+def set_wear_detection(enabled: bool, address: str | None = None) -> dict[str, object]:
+    device = select_device(address)
+    session, _status, _events = OpoSession.bootstrap(device)
+    try:
+        s, _batch = session.set_feature_switch(FEATURE_WEAR_DETECTION, enabled)
+        return {"wear_detection": enabled, "success": s}
     finally:
         session.__exit__(None, None, None)
 

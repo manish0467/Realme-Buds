@@ -47,7 +47,12 @@ BarWidget {
   readonly property bool gameModeEnabled: !!(snapshot && snapshot.feature_switches
     && (snapshot.feature_switches.game_mode === true
         || snapshot.feature_switches.low_latency === true))
+  readonly property bool wearDetectionAvailable: !!(snapshot && snapshot.capabilities
+    && snapshot.capabilities.indexOf("wear_detection") !== -1)
+  readonly property bool wearDetectionEnabled: !!(snapshot && snapshot.feature_switches
+    && snapshot.feature_switches.wear_detection === true)
   property bool notificationsEnabled: true
+  property bool mprisHookEnabled: true
   readonly property bool useTwoColumnLayout: eqAvailable
     && popup.availableCardWidth >= Style.space(560)
   readonly property int panelHeight: popup.contentHeight
@@ -186,6 +191,25 @@ BarWidget {
 
   function testNotification() {
     if (budsService) budsService.testNotification()
+  }
+
+  function toggleWearDetection() {
+    if (!budsService || connection !== "connected" || pendingRequestId >= 0) return
+    var nextState = !wearDetectionEnabled
+    var requestId = budsService.setWearDetection(nextState)
+    if (requestId === null) {
+      outcome = "Could not start request"
+      return
+    }
+    pendingRequestId = requestId
+    pendingMode = nextState ? "wear_on" : "wear_off"
+    pendingKind = "wear_detection"
+    outcome = ""
+  }
+
+  function toggleMprisHook() {
+    mprisHookEnabled = !mprisHookEnabled
+    if (budsService) budsService.setMprisHook(mprisHookEnabled)
   }
 
   function selectEq(value) {
@@ -548,6 +572,51 @@ BarWidget {
                 Keys.onUpPressed: nextItemInFocusChain(false).forceActiveFocus(Qt.BacktabFocusReason)
                 Keys.onEscapePressed: root.close()
                 onClicked: root.toggleNotifications()
+              }
+
+              Button {
+                id: wearDetectionButton
+                width: featureColumn.width
+                height: Math.max(implicitHeight, Style.space(32))
+                text: "󰂚  In-Ear Detection"
+                selected: root.wearDetectionEnabled
+                bordered: true
+                leftAlign: true
+                enabled: root.connection === "connected" && root.pendingRequestId < 0
+                opacity: enabled ? 1.0 : 0.5
+                foreground: root.bar.foreground
+                background: root.bar.background
+                accent: Color.accent
+                fontFamily: root.bar.fontFamily
+                focusable: true
+                visible: root.wearDetectionAvailable
+                onActiveFocusChanged: if (activeFocus) panelScroll.reveal(this)
+                Keys.onDownPressed: nextItemInFocusChain().forceActiveFocus(Qt.TabFocusReason)
+                Keys.onUpPressed: nextItemInFocusChain(false).forceActiveFocus(Qt.BacktabFocusReason)
+                Keys.onEscapePressed: root.close()
+                onClicked: root.toggleWearDetection()
+              }
+
+              Button {
+                id: mprisHookButton
+                width: featureColumn.width
+                height: Math.max(implicitHeight, Style.space(32))
+                text: root.mprisHookEnabled ? "󰎆  MPRIS Auto-Pause (On)" : "󰎆  MPRIS Auto-Pause (Off)"
+                selected: root.mprisHookEnabled
+                bordered: true
+                leftAlign: true
+                enabled: root.connection === "connected"
+                opacity: enabled ? 1.0 : 0.5
+                foreground: root.bar.foreground
+                background: root.bar.background
+                accent: Color.accent
+                fontFamily: root.bar.fontFamily
+                focusable: true
+                onActiveFocusChanged: if (activeFocus) panelScroll.reveal(this)
+                Keys.onDownPressed: nextItemInFocusChain().forceActiveFocus(Qt.TabFocusReason)
+                Keys.onUpPressed: nextItemInFocusChain(false).forceActiveFocus(Qt.BacktabFocusReason)
+                Keys.onEscapePressed: root.close()
+                onClicked: root.toggleMprisHook()
               }
             }
           }
@@ -933,6 +1002,43 @@ BarWidget {
       })
     }
 
+    function toggleWearDetection(): string {
+      root.toggleWearDetection()
+      return "ok"
+    }
+
+    function setWearDetection(enabled: string): string {
+      var val = (enabled === "true" || enabled === "1" || enabled === "on")
+      if (root.budsService) root.budsService.setWearDetection(val)
+      return "ok"
+    }
+
+    function wearStatus(): string {
+      return JSON.stringify({
+        wear_detection: root.wearDetectionEnabled,
+        wear_detection_available: root.wearDetectionAvailable,
+        mpris_hook: root.mprisHookEnabled
+      })
+    }
+
+    function toggleMprisHook(): string {
+      root.toggleMprisHook()
+      return "ok"
+    }
+
+    function setMprisHook(enabled: string): string {
+      var val = (enabled === "true" || enabled === "1" || enabled === "on")
+      root.mprisHookEnabled = val
+      if (root.budsService) root.budsService.setMprisHook(val)
+      return "ok"
+    }
+
+    function mprisHookStatus(): string {
+      return JSON.stringify({
+        enabled: root.mprisHookEnabled
+      })
+    }
+
     function status(): string {
       return JSON.stringify({
         service: root.budsService !== null,
@@ -955,6 +1061,9 @@ BarWidget {
         game_mode: root.gameModeEnabled,
         game_mode_available: root.gameModeAvailable,
         notifications_enabled: root.notificationsEnabled,
+        wear_detection: root.wearDetectionEnabled,
+        wear_detection_available: root.wearDetectionAvailable,
+        mpris_hook_enabled: root.mprisHookEnabled,
         pending: root.pendingRequestId >= 0,
         eq: root.eqStatus,
         compatibility: root.compatibilityKind,

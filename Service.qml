@@ -107,6 +107,22 @@ Item {
     return request("test_notification", {})
   }
 
+  function setWearDetection(enabled) {
+    return request("set_wear_detection", { enabled: !!enabled })
+  }
+
+  function queryWearDetection() {
+    return request("wear_detection_status", {})
+  }
+
+  function setMprisHook(enabled) {
+    return request("set_mpris_hook", { enabled: !!enabled })
+  }
+
+  function mprisHookStatus() {
+    return request("mpris_hook_status", {})
+  }
+
   function eqStatus() {
     return request("eq_status", {})
   }

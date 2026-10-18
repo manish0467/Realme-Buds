@@ -8,7 +8,7 @@ from .lifecycle_trace import mark
 from .api import BudsBackend
 from .models import ControllerSnapshot, ControlResult, EqControlResult, EqStatusResult, EventBatch, StatusResult
 from .profiles import profile_for_product
-from .protocol import FEATURE_GAME_MODE, FEATURE_LOW_LATENCY, VersionRecord
+from .protocol import FEATURE_GAME_MODE, FEATURE_LOW_LATENCY, FEATURE_WEAR_DETECTION, VersionRecord
 from .session import OpoSession, UnsupportedProductError
 from .timing import AncRequestError, PhaseTimer
 
@@ -307,6 +307,32 @@ class BudsController:
     def set_game_mode_with_snapshot(self, enabled: bool) -> tuple[bool, ControllerSnapshot]:
         with self._lock:
             success = self.set_game_mode(enabled)
+            snapshot = self.snapshot()
+            return success, snapshot
+
+    def wear_detection_status(self) -> bool:
+        with self._lock:
+            switches = self.query_feature_switches()
+            return switches.get("wear_detection", False)
+
+    def set_wear_detection(self, enabled: bool) -> bool:
+        with self._lock:
+            self._require_running()
+            if self._session is None:
+                raise RuntimeError("session is not connected")
+            try:
+                success, batch = cast(OpoSession, self._session).set_feature_switch(
+                    FEATURE_WEAR_DETECTION, enabled
+                )
+                self._apply_batch(batch)
+            except Exception:
+                success = False
+            self._generation += 1
+            return success
+
+    def set_wear_detection_with_snapshot(self, enabled: bool) -> tuple[bool, ControllerSnapshot]:
+        with self._lock:
+            success = self.set_wear_detection(enabled)
             snapshot = self.snapshot()
             return success, snapshot
 

@@ -9,12 +9,13 @@ from typing import TypeAlias
 
 from .availability import Availability
 from .controller import BudsController
-from .timing import AncRequestError
 from .models import ControllerSnapshot, ControlResult, EqControlResult
+from .mpris import MprisManager
 from .notifications import NotificationEvent
 from .profiles import compatibility_for_product, profile_for_product
 from .report import build_snapshot_report, write_report
 from .service import BudsServiceRunner, ServiceState
+from .timing import AncRequestError
 
 JsonObject: TypeAlias = dict[str, object]
 Dispatch: TypeAlias = Callable[[Callable[[], None]], None]
@@ -67,6 +68,8 @@ class BudsFrontendBridge:
         self.emit = emit
         self.dispatch = dispatch or (lambda callback: callback())
         self._recent_errors: deque[str] = deque(maxlen=12)
+        self.mpris_manager = MprisManager(enabled=True)
+        self._last_charging_state: bool | None = None
         self.runner = BudsServiceRunner(
             self.controller,
             availability=availability,
@@ -180,6 +183,28 @@ class BudsFrontendBridge:
                 model_name = self.controller.snapshot().status.model if self.controller.snapshot().status else "realme Buds"
                 event = self.runner.notification_policy.send_test_notification(model_name=model_name or "realme Buds")
                 result = {"sent": True, "event": event.to_dict()}
+            elif command == "wear_detection_status":
+                self._require_parameters(command, params, set())
+                result = {"wear_detection": self.controller.wear_detection_status()}
+                self._on_snapshot(self.controller.snapshot())
+            elif command == "set_wear_detection":
+                self._require_parameters(command, params, {"enabled"})
+                enabled = params["enabled"]
+                if not isinstance(enabled, bool):
+                    raise ValueError("set_wear_detection parameter 'enabled' must be a boolean")
+                success, snapshot = self.controller.set_wear_detection_with_snapshot(enabled)
+                result = {"wear_detection": enabled, "success": success}
+                self._on_snapshot(snapshot)
+            elif command == "mpris_hook_status":
+                self._require_parameters(command, params, set())
+                result = self.mpris_manager.get_state()
+            elif command == "set_mpris_hook":
+                self._require_parameters(command, params, {"enabled"})
+                enabled = params["enabled"]
+                if not isinstance(enabled, bool):
+                    raise ValueError("set_mpris_hook parameter 'enabled' must be a boolean")
+                self.mpris_manager.enabled = enabled
+                result = {"enabled": enabled}
             elif command == "save_diagnostic_report":
                 self._require_parameters(command, params, {"path"})
                 path = params["path"]
@@ -236,6 +261,19 @@ class BudsFrontendBridge:
         self._dispatch_event(event)
 
     def _on_snapshot(self, snapshot: ControllerSnapshot) -> None:
+        if snapshot.status and snapshot.status.battery:
+            now_charging = any(
+                b.get("charging", False)
+                for k, b in snapshot.status.battery.items()
+                if k in ("left", "right") and isinstance(b, dict)
+            )
+            if self._last_charging_state is not None:
+                if now_charging and not self._last_charging_state:
+                    self.mpris_manager.handle_wear_change(wearing=False)
+                elif not now_charging and self._last_charging_state:
+                    self.mpris_manager.handle_wear_change(wearing=True)
+            self._last_charging_state = now_charging
+
         event: JsonObject = {
             "schema_version": SCHEMA_VERSION,
             "type": "snapshot",
