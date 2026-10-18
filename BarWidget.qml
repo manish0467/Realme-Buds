@@ -303,20 +303,25 @@ BarWidget {
     var gains = []
     for (var i = 0; i < bandRepeater.count; i++)
       gains.push(Number(bandRepeater.itemAt(i).gainValue))
-    var requestId = budsService.setCustomEq(selectedCustom.eq_id, gains)
+    var customName = (customNameField && customNameField.text.trim())
+      ? customNameField.text.trim() : selectedCustom.name
+    var requestId = budsService.setCustomEq(selectedCustom.eq_id, gains, customName)
     if (requestId === null) { outcome = "Could not start request"; return }
     pendingRequestId = requestId
     pendingKind = "custom_eq"
-    pendingMode = selectedCustom.name
+    pendingMode = customName
     outcome = ""
   }
 
   function addCustomEq(name) {
     if (!budsService || pendingRequestId >= 0) return
-    var requestId = budsService.addCustomEq(name || "Custom", [0, 0, 0, 0, 0, 0])
+    var nextNum = root.customEqEntries.length + 1
+    var presetName = (name && String(name).trim()) ? String(name).trim() : ("Custom " + nextNum)
+    var requestId = budsService.addCustomEq(presetName, [0, 0, 0, 0, 0, 0])
     if (requestId !== null) {
       pendingRequestId = requestId
       pendingKind = "add_custom_eq"
+      outcome = ""
     }
   }
 
@@ -407,20 +412,43 @@ BarWidget {
       pendingReportLocation = ""
       return
     }
-    if (response.ok === true && (completedKind === "eq_status"
-        || completedKind === "eq" || completedKind === "custom_eq"
-        || completedKind === "add_custom_eq" || completedKind === "delete_custom_eq")) {
+    if (response.ok === true && (completedKind === "eq_status" || completedKind === "eq")) {
       customSelectionDirty = false
       syncCustomSlotFromEq()
     }
+    if (response.ok === true && completedKind === "add_custom_eq") {
+      var newId = (response.result && response.result.eq_id !== undefined) ? response.result.eq_id : -1
+      var targetIdx = -1
+      if (newId !== -1) {
+        for (var i = 0; i < root.customEqEntries.length; i++) {
+          if (root.customEqEntries[i].eq_id === newId) {
+            targetIdx = i
+            break
+          }
+        }
+      }
+      if (targetIdx >= 0) {
+        root.customSlotIndex = targetIdx
+      } else {
+        root.customSlotIndex = Math.max(0, root.customEqEntries.length - 1)
+      }
+      root.customSelectionDirty = true
+      outcome = "Created " + (response.result && response.result.name ? response.result.name : "custom EQ")
+      return
+    }
+    if (response.ok === true && completedKind === "delete_custom_eq") {
+      root.customSlotIndex = Math.max(0, Math.min(root.customSlotIndex, root.customEqEntries.length - 1))
+      root.customSelectionDirty = true
+      outcome = "Custom EQ deleted"
+      return
+    }
+    if (response.ok === true && completedKind === "custom_eq") {
+      root.customSelectionDirty = true
+      outcome = "Custom EQ applied"
+      return
+    }
     if (response.ok === true && completedKind === "gesture") {
       outcome = "Gesture updated"
-    } else if (response.ok === true && completedKind === "custom_eq") {
-      outcome = "Custom EQ applied"
-    } else if (response.ok === true && completedKind === "add_custom_eq") {
-      outcome = "Custom EQ added"
-    } else if (response.ok === true && completedKind === "delete_custom_eq") {
-      outcome = "Custom EQ deleted"
     } else if (response.ok === true && response.result && response.result.verified === true) {
       outcome = "Verified on earbuds"
     } else if (response.ok === true && completedKind === "eq_status") {
@@ -1165,9 +1193,10 @@ BarWidget {
               spacing: Style.space(5)
               visible: root.customEqEntries.length > 0
               Controls.ComboBox {
+                id: customSlotCombo
                 width: root.customEqEntries.length > 1 ? parent.width - Style.space(75) : parent.width
                 model: root.customEqEntries.map(function(entry) { return entry.name })
-                currentIndex: root.customSlotIndex
+                currentIndex: Math.max(0, Math.min(root.customSlotIndex, root.customEqEntries.length - 1))
                 enabled: root.pendingRequestId < 0
                 onActivated: function(index) { root.selectCustomSlot(index) }
               }
@@ -1179,6 +1208,25 @@ BarWidget {
                 onClicked: {
                   if (root.selectedCustom) root.deleteCustomEq(root.selectedCustom.eq_id)
                 }
+              }
+            }
+
+            Row {
+              width: parent.width
+              spacing: Style.space(6)
+              visible: root.selectedCustom !== null
+              Text {
+                text: "Name:"
+                anchors.verticalCenter: parent.verticalCenter
+                color: root.bar.foreground
+                font.family: root.bar.fontFamily
+                font.pixelSize: Style.font.bodySmall
+              }
+              TextField {
+                id: customNameField
+                width: parent.width - Style.space(50)
+                text: root.selectedCustom ? root.selectedCustom.name : ""
+                placeholderText: "Preset name"
               }
             }
 

@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Sequence
 
 DEFAULT_FREQUENCIES = (64, 250, 1000, 4000, 8000, 16000)
-CONFIG_PATH = Path.home() / ".config" / "omarchy" / "plugins" / "realme-buds.control" / "custom_eq.json"
+CONFIG_DIR = Path.home() / ".config" / "omarchy" / "realme-buds"
+CONFIG_PATH = CONFIG_DIR / "custom_eq.json"
+LEGACY_CONFIG_PATH = Path.home() / ".config" / "omarchy" / "plugins" / "realme-buds.control" / "custom_eq.json"
 
 
 @dataclass(frozen=True)
@@ -94,10 +96,31 @@ class CustomEqStore:
                         {"frequency": 16000, "gain_db": 0},
                     ],
                 },
+                {
+                    "id": 103,
+                    "name": "Deep Bass",
+                    "base_preset": "bass",
+                    "bands": [
+                        {"frequency": 64, "gain_db": 6},
+                        {"frequency": 250, "gain_db": 4},
+                        {"frequency": 1000, "gain_db": 1},
+                        {"frequency": 4000, "gain_db": 0},
+                        {"frequency": 8000, "gain_db": 0},
+                        {"frequency": 16000, "gain_db": 0},
+                    ],
+                },
             ],
         }
 
     def load(self) -> dict[str, object]:
+        if not self.path.exists() and self.path == CONFIG_PATH and LEGACY_CONFIG_PATH.exists():
+            try:
+                data = json.loads(LEGACY_CONFIG_PATH.read_text(encoding="utf-8"))
+                self.save(data)
+                LEGACY_CONFIG_PATH.unlink(missing_ok=True)
+                return data
+            except Exception:
+                pass
         if not self.path.exists():
             return self._default_data()
         try:
@@ -114,6 +137,8 @@ class CustomEqStore:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with open(self.path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
+            if self.path == CONFIG_PATH and LEGACY_CONFIG_PATH.exists():
+                LEGACY_CONFIG_PATH.unlink(missing_ok=True)
         except Exception:
             pass
 

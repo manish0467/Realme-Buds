@@ -181,8 +181,10 @@ Item {
     return request("set_eq", { preset: String(preset || "") })
   }
 
-  function setCustomEq(entryId, gains) {
-    return request("set_custom_eq", { entry_id: Number(entryId), gains_db: gains })
+  function setCustomEq(entryId, gains, name) {
+    var params = { entry_id: Number(entryId), gains_db: gains }
+    if (name) params.name = String(name)
+    return request("set_custom_eq", params)
   }
 
   function addCustomEq(name, gains) {

@@ -25,14 +25,14 @@ Dispatch: TypeAlias = Callable[[Callable[[], None]], None]
 SCHEMA_VERSION = 1
 
 
-def serialize_snapshot(snapshot: ControllerSnapshot) -> JsonObject:
+def serialize_snapshot(snapshot: ControllerSnapshot, custom_store: CustomEqStore | None = None) -> JsonObject:
     """Return the stable, address-free snapshot exposed to frontends."""
     profile = profile_for_product(snapshot.status.product_id) if snapshot.status else None
     capabilities = set(profile.capabilities) if profile else set()
     capabilities.update(snapshot.feature_switches)
 
-    custom_store = CustomEqStore()
-    stored_custom = [p.to_dict() for p in custom_store.list_presets()]
+    store = custom_store or CustomEqStore()
+    stored_custom = [p.to_dict() for p in store.list_presets()]
 
     eq_dict = None
     if snapshot.eq_status:
@@ -84,10 +84,12 @@ class BudsFrontendBridge:
         dispatch: Dispatch | None = None,
         availability: Availability | None = None,
         poll_interval: float = 0.5,
+        custom_store: CustomEqStore | None = None,
     ) -> None:
         self.controller = controller or BudsController()
         self.emit = emit
         self.dispatch = dispatch or (lambda callback: callback())
+        self.custom_store = custom_store or CustomEqStore()
         self._recent_errors: deque[str] = deque(maxlen=12)
         self.mpris_manager = MprisManager(enabled=True)
         self.locator = AcousticLocator(default_address=self.controller.address)
@@ -174,37 +176,36 @@ class BudsFrontendBridge:
                     not isinstance(value, int) or isinstance(value, bool) for value in gains
                 ):
                     raise ValueError("set_custom_eq parameter 'gains_db' must be an integer array")
-                custom_store = CustomEqStore()
-                preset = custom_store.update_preset(entry_id, gains=gains)
-                if preset is None:
-                    preset = custom_store.add_preset(f"Custom {entry_id}", gains=gains)
-                custom_store.set_active_id(preset.id)
+                name = params.get("name")
+                name_str = str(name).strip() if name else None
+                preset = self.custom_store.update_preset(entry_id, name=name_str, gains=gains)
+                if preset is not None:
+                    self.custom_store.set_active_id(preset.id)
                 try:
                     control = self.controller.set_custom_eq(entry_id, tuple(gains))
                     self.controller.eq_status()
                     result = self._serialize_eq_control(control)
                 except Exception:
-                    best_base = preset.infer_base_preset()
+                    best_base = preset.infer_base_preset() if preset else "balanced"
                     try:
                         self.controller.set_eq(best_base)
                     except Exception:
                         pass
-                    result = {"verified": True, "entry_id": preset.id, "name": preset.name}
+                    preset_name = preset.name if preset else (name_str or f"Custom {entry_id}")
+                    result = {"verified": True, "entry_id": entry_id, "name": preset_name}
                 self._on_snapshot(self.controller.snapshot())
             elif command == "add_custom_eq":
-                name = str(params.get("name", "Custom")) if params else "Custom"
+                name = str(params.get("name", "")).strip() if params else ""
                 gains = params.get("gains_db") if params else None
                 gains_list = [int(v) for v in gains] if isinstance(gains, list) else None
-                custom_store = CustomEqStore()
-                preset = custom_store.add_preset(name, gains=gains_list)
+                preset = self.custom_store.add_preset(name or None, gains=gains_list)
                 result = preset.to_dict()
                 self._on_snapshot(self.controller.snapshot())
             elif command == "delete_custom_eq":
                 self._require_parameters(command, params, {"entry_id"})
                 entry_id = int(params["entry_id"])
-                custom_store = CustomEqStore()
-                custom_store.delete_preset(entry_id)
-                result = {"verified": True}
+                self.custom_store.delete_preset(entry_id)
+                result = {"verified": True, "entry_id": entry_id}
                 self._on_snapshot(self.controller.snapshot())
             elif command == "game_mode_status":
                 self._require_parameters(command, params, set())
@@ -370,7 +371,7 @@ class BudsFrontendBridge:
         event: JsonObject = {
             "schema_version": SCHEMA_VERSION,
             "type": "snapshot",
-            "snapshot": serialize_snapshot(snapshot),
+            "snapshot": serialize_snapshot(snapshot, self.custom_store),
         }
         self._dispatch_event(event)
 

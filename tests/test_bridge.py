@@ -55,6 +55,15 @@ EQ_SNAPSHOT = ControllerSnapshot(
 
 
 class BridgeTests(unittest.TestCase):
+    def setUp(self):
+        self._temp_dir = tempfile.TemporaryDirectory()
+        self._store_patch = patch("realme_buds.custom_eq.CONFIG_PATH", Path(self._temp_dir.name) / "custom_eq.json")
+        self._store_patch.start()
+
+    def tearDown(self):
+        self._store_patch.stop()
+        self._temp_dir.cleanup()
+
     def test_snapshot_serialization_is_json_compatible_and_address_free(self):
         payload = serialize_snapshot(SNAPSHOT)
         encoded = json.dumps(payload)
