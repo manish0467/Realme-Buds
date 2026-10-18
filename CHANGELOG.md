@@ -13,8 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hyprland default hotkey binding (`SUPER + ALT + A`) configured in `~/.config/hypr/bindings.lua`.
 - `cycle_anc` and `cycle_anc_with_snapshot` methods on `BudsController` and `BudsFrontendBridge`.
 
+### Added (Day 2 - Completed ✅)
+- 45ms Low Latency Game Mode support for realme Buds T310 (`063C12.json`).
+- CLI commands: `./realme-buds game status`, `./realme-buds game on`, `./realme-buds game off`, and `./realme-buds game toggle`.
+- Dedicated "Special Features" section with interactive Game Mode button (`󰊴  Game Mode (45ms)`) in `BarWidget.qml`.
+- Quickshell IPC endpoints `setGameMode` and `toggleGameMode` on `realme-buds.control`.
+- Global Hyprland hotkey binding (`SUPER + ALT + G`) in `~/.config/hypr/bindings.lua`.
+
 ### Planned (Daily Shipping Roadmap)
-- **Day 2**: 45ms Low Latency Game Mode toggle (`./realme-buds game status|on|off`) and panel switch.
 - **Day 3**: Battery threshold notifications (20% warning, 10% critical) with anti-spam discharge tracking.
 - **Day 4**: In-ear wear detection toggle and desktop MPRIS auto-pause hook.
 - **Day 5**: Dual-device / Multipoint switch support.

@@ -166,6 +166,33 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(len(emitted), 1)
         self.assertEqual(emitted[0]["type"], "snapshot")
 
+    def test_game_mode_commands_execute_and_emit_snapshot(self):
+        emitted = []
+        controller = FakeController()
+        bridge = BudsFrontendBridge(emitted.append, controller=controller)
+        status_res = bridge.execute("game_mode_status", request_id="gm-1")
+        self.assertTrue(status_res["ok"])
+        self.assertFalse(status_res["result"]["game_mode"])
+        self.assertEqual(emitted[-1]["type"], "snapshot")
+
+        set_res = bridge.execute("set_game_mode", {"enabled": True}, request_id="gm-2")
+        self.assertTrue(set_res["ok"])
+        self.assertTrue(set_res["result"]["game_mode"])
+        self.assertTrue(set_res["result"]["success"])
+        self.assertEqual(controller.game_mode_states, [True])
+        self.assertEqual(emitted[-1]["type"], "snapshot")
+
+    def test_set_game_mode_validates_parameters(self):
+        controller = FakeController()
+        bridge = BudsFrontendBridge(lambda _e: None, controller=controller)
+        bad_type = bridge.execute("set_game_mode", {"enabled": "yes"})
+        self.assertFalse(bad_type["ok"])
+        self.assertEqual(bad_type["error"]["code"], "invalid_parameters")
+        self.assertIn("boolean", bad_type["error"]["message"])
+        missing = bridge.execute("set_game_mode", {})
+        self.assertFalse(missing["ok"])
+        self.assertEqual(missing["error"]["code"], "invalid_parameters")
+
     def test_eq_commands_are_typed_verified_and_emit_fresh_state(self):
         emitted = []
         controller = FakeController()
@@ -241,7 +268,17 @@ class FakeController:
         self.anc_modes = []
         self.eq_targets = []
         self.custom_targets = []
+        self.game_mode = False
+        self.game_mode_states = []
         self.current_snapshot = SNAPSHOT
+
+    def game_mode_status(self):
+        return self.game_mode
+
+    def set_game_mode_with_snapshot(self, enabled):
+        self.game_mode = enabled
+        self.game_mode_states.append(enabled)
+        return True, SNAPSHOT
 
     def snapshot(self):
         return self.current_snapshot

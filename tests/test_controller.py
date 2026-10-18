@@ -139,6 +139,18 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(controller.snapshot().feature_switches["game_mode"], True)
         controller.shutdown()
 
+    def test_game_mode_status_and_set_game_mode(self):
+        session = FakeSession()
+        backend = FakeBackend([session])
+        controller = BudsController(backend)
+        controller.start()
+
+        self.assertFalse(controller.game_mode_status())
+        ok, snapshot = controller.set_game_mode_with_snapshot(True)
+        self.assertTrue(ok)
+        self.assertIsNotNone(snapshot)
+        controller.shutdown()
+
 
 class FakeBackend:
     def __init__(self, sessions):

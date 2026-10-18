@@ -148,6 +148,18 @@ class BudsFrontendBridge:
                 self.controller.eq_status()
                 result = self._serialize_eq_control(control)
                 self._on_snapshot(self.controller.snapshot())
+            elif command == "game_mode_status":
+                self._require_parameters(command, params, set())
+                result = {"game_mode": self.controller.game_mode_status()}
+                self._on_snapshot(self.controller.snapshot())
+            elif command == "set_game_mode":
+                self._require_parameters(command, params, {"enabled"})
+                enabled = params["enabled"]
+                if not isinstance(enabled, bool):
+                    raise ValueError("set_game_mode parameter 'enabled' must be a boolean")
+                success, snapshot = self.controller.set_game_mode_with_snapshot(enabled)
+                result = {"game_mode": enabled, "success": success}
+                self._on_snapshot(snapshot)
             elif command == "save_diagnostic_report":
                 self._require_parameters(command, params, {"path"})
                 path = params["path"]

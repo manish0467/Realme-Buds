@@ -87,6 +87,14 @@ Item {
     return request("cycle_anc", {})
   }
 
+  function setGameMode(enabled) {
+    return request("set_game_mode", { enabled: !!enabled })
+  }
+
+  function queryGameMode() {
+    return request("game_mode_status", {})
+  }
+
   function eqStatus() {
     return request("eq_status", {})
   }

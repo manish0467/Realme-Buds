@@ -41,6 +41,12 @@ BarWidget {
     ? customEqEntries[Math.max(0, Math.min(customSlotIndex, customEqEntries.length - 1))] : null
   readonly property bool eqAvailable: !!(snapshot && snapshot.capabilities
     && snapshot.capabilities.indexOf("eq") !== -1)
+  readonly property bool gameModeAvailable: !!(snapshot && snapshot.capabilities
+    && (snapshot.capabilities.indexOf("game_mode") !== -1
+        || snapshot.capabilities.indexOf("low_latency") !== -1))
+  readonly property bool gameModeEnabled: !!(snapshot && snapshot.feature_switches
+    && (snapshot.feature_switches.game_mode === true
+        || snapshot.feature_switches.low_latency === true))
   readonly property bool useTwoColumnLayout: eqAvailable
     && popup.availableCardWidth >= Style.space(560)
   readonly property int panelHeight: popup.contentHeight
@@ -155,6 +161,20 @@ BarWidget {
     pendingRequestId = requestId
     pendingMode = "cycle"
     pendingKind = "anc"
+    outcome = ""
+  }
+
+  function toggleGameMode() {
+    if (!budsService || connection !== "connected" || pendingRequestId >= 0) return
+    var nextState = !gameModeEnabled
+    var requestId = budsService.setGameMode(nextState)
+    if (requestId === null) {
+      outcome = "Could not start request"
+      return
+    }
+    pendingRequestId = requestId
+    pendingMode = nextState ? "game_on" : "game_off"
+    pendingKind = "game_mode"
     outcome = ""
   }
 
@@ -458,7 +478,47 @@ BarWidget {
                 }
               }
             }
+
+            Column {
+              id: featureColumn
+              width: noiseColumn.width
+              spacing: Style.space(5)
+              visible: root.gameModeAvailable
+
+              Text {
+                width: parent.width
+                text: "Special Features"
+                textFormat: Text.PlainText
+                color: root.bar.foreground
+                font.family: root.bar.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                font.bold: true
+              }
+
+              Button {
+                id: gameModeButton
+                width: featureColumn.width
+                height: Math.max(implicitHeight, Style.space(32))
+                text: "󰊴  Game Mode (45ms)"
+                selected: root.gameModeEnabled
+                bordered: true
+                leftAlign: true
+                enabled: root.connection === "connected" && root.pendingRequestId < 0
+                opacity: enabled ? 1.0 : 0.5
+                foreground: root.bar.foreground
+                background: root.bar.background
+                accent: Color.accent
+                fontFamily: root.bar.fontFamily
+                focusable: true
+                onActiveFocusChanged: if (activeFocus) panelScroll.reveal(this)
+                Keys.onDownPressed: nextItemInFocusChain().forceActiveFocus(Qt.TabFocusReason)
+                Keys.onUpPressed: nextItemInFocusChain(false).forceActiveFocus(Qt.BacktabFocusReason)
+                Keys.onEscapePressed: root.close()
+                onClicked: root.toggleGameMode()
+              }
+            }
           }
+
 
           Column {
             id: eqColumn
@@ -809,6 +869,17 @@ BarWidget {
       return "ok"
     }
 
+    function toggleGameMode(): string {
+      root.toggleGameMode()
+      return "ok"
+    }
+
+    function setGameMode(enabled: string): string {
+      var val = (enabled === "true" || enabled === "1" || enabled === "on")
+      if (root.budsService) root.budsService.setGameMode(val)
+      return "ok"
+    }
+
     function status(): string {
       return JSON.stringify({
         service: root.budsService !== null,
@@ -828,6 +899,8 @@ BarWidget {
         two_column: root.useTwoColumnLayout,
         anc_modes: root.ancOptions.map(function(option) { return option.value }),
         current_anc: root.currentAncMode,
+        game_mode: root.gameModeEnabled,
+        game_mode_available: root.gameModeAvailable,
         pending: root.pendingRequestId >= 0,
         eq: root.eqStatus,
         compatibility: root.compatibilityKind,

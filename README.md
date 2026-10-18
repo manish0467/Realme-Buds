@@ -146,6 +146,10 @@ Re-enable afterward to resume monitoring.
 # Direct cycle command (automatically uses fast running Omarchy session or standalone fallback)
 ./realme-buds anc cycle
 
+# 45ms Low Latency Game Mode
+./realme-buds game status
+./realme-buds game on              # or: off, toggle
+
 # Control noise cancellation directly
 ./realme-buds anc status
 ./realme-buds anc on               # or: off, transparency
@@ -155,14 +159,16 @@ Re-enable afterward to resume monitoring.
 ./realme-buds diagnostics --report
 ```
 
-### Global Hyprland Hotkey
+### Global Hyprland Hotkeys
 
-You can cycle ANC modes on the fly (`Off` → `Transparency` → `Noise Cancellation`) with the default hotkey:
-- **`SUPER + ALT + A`**: Cycle ANC modes instantly without opening the panel.
+Control noise modes and gaming latency on the fly without opening the panel:
+- **`SUPER + ALT + A`**: Cycle ANC modes instantly (`Off` → `Transparency` → `Noise Cancellation`).
+- **`SUPER + ALT + G`**: Toggle 45ms Low Latency Game Mode on/off.
 
 Configured in `~/.config/hypr/bindings.lua`:
 ```lua
 o.bind("SUPER + ALT + A", "Cycle Earbuds ANC", "omarchy-shell realme-buds.control cycleAnc")
+o.bind("SUPER + ALT + G", "Toggle Earbuds Game Mode", "omarchy-shell realme-buds.control toggleGameMode")
 ```
 
 

@@ -8,7 +8,7 @@ from .lifecycle_trace import mark
 from .api import BudsBackend
 from .models import ControllerSnapshot, ControlResult, EqControlResult, EqStatusResult, EventBatch, StatusResult
 from .profiles import profile_for_product
-from .protocol import VersionRecord
+from .protocol import FEATURE_GAME_MODE, FEATURE_LOW_LATENCY, VersionRecord
 from .session import OpoSession, UnsupportedProductError
 from .timing import AncRequestError, PhaseTimer
 
@@ -280,6 +280,35 @@ class BudsController:
             success, batch = cast(OpoSession, self._session).set_feature_switch(feature, enabled)
             self._apply_batch(batch)
             return success
+
+    def game_mode_status(self) -> bool:
+        with self._lock:
+            switches = self.query_feature_switches()
+            return switches.get("game_mode", switches.get("low_latency", False))
+
+    def set_game_mode(self, enabled: bool) -> bool:
+        with self._lock:
+            self._require_running()
+            if self._session is None:
+                raise RuntimeError("session is not connected")
+            success = False
+            for fid in (FEATURE_GAME_MODE, FEATURE_LOW_LATENCY):
+                try:
+                    s, batch = cast(OpoSession, self._session).set_feature_switch(fid, enabled)
+                    self._apply_batch(batch)
+                    if s:
+                        success = True
+                        break
+                except Exception:
+                    pass
+            self._generation += 1
+            return success
+
+    def set_game_mode_with_snapshot(self, enabled: bool) -> tuple[bool, ControllerSnapshot]:
+        with self._lock:
+            success = self.set_game_mode(enabled)
+            snapshot = self.snapshot()
+            return success, snapshot
 
 
     def poll(self, wait: float = 0.2) -> ControllerSnapshot:

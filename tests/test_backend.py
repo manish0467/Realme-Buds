@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from realme_buds.backend import (cycle_anc, diagnostics_report, query_capabilities,
-                                query_feature_switches, read_status, set_anc)
+                                query_feature_switches, query_game_mode, read_status, set_anc, set_game_mode)
 from realme_buds.bluez import Device
 from realme_buds.models import StatusResult
 from realme_buds.profiles import PROFILES
@@ -119,6 +119,21 @@ class BackendTests(unittest.TestCase):
         res = cycle_anc()
         self.assertEqual(res["anc"], "off")
         mock_set.assert_called_once_with("off", None)
+
+    @patch("realme_buds.backend.query_feature_switches", return_value={"game_mode": True})
+    def test_query_game_mode(self, _query):
+        res = query_game_mode()
+        self.assertTrue(res["game_mode"])
+
+    @patch("realme_buds.backend.select_device", return_value=DEVICE)
+    def test_set_game_mode(self, _select):
+        from unittest.mock import MagicMock
+        session = MagicMock()
+        session.set_feature_switch.return_value = (True, None)
+        with patch("realme_buds.backend.OpoSession.bootstrap", return_value=(session, None, None)):
+            res = set_game_mode(True)
+            self.assertTrue(res["success"])
+            self.assertTrue(res["game_mode"])
 
 
 class FakeTransport:

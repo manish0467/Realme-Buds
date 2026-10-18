@@ -23,6 +23,8 @@ from .protocol import (
     STATUS_QUERY_PAYLOAD,
     SUBSCRIBE_BROADCAST,
     AncState,
+    FEATURE_GAME_MODE,
+    FEATURE_LOW_LATENCY,
     FEATURE_SWITCH_NAMES,
     Frame,
     format_firmware_version,
@@ -259,6 +261,30 @@ def cycle_anc(address: str | None = None) -> dict[str, object]:
         next_mode = "transparency" if "transparency" in modes else modes[0]
 
     return set_anc(next_mode, address)
+
+
+def query_game_mode(address: str | None = None) -> dict[str, object]:
+    switches = query_feature_switches(address)
+    enabled = switches.get("game_mode", switches.get("low_latency", False))
+    return {"game_mode": enabled, "switches": switches}
+
+
+def set_game_mode(enabled: bool, address: str | None = None) -> dict[str, object]:
+    device = select_device(address)
+    session, _status, _events = OpoSession.bootstrap(device)
+    try:
+        success = False
+        for fid in (FEATURE_GAME_MODE, FEATURE_LOW_LATENCY):
+            try:
+                s, _batch = session.set_feature_switch(fid, enabled)
+                if s:
+                    success = True
+                    break
+            except Exception:
+                pass
+        return {"game_mode": enabled, "success": success}
+    finally:
+        session.__exit__(None, None, None)
 
 
 def read_eq(address: str | None = None) -> EqStatusResult:

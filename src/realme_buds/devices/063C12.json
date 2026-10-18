@@ -11,7 +11,8 @@
     "firmware",
     "anc",
     "transparency",
-    "eq"
+    "eq",
+    "game_mode"
   ],
   "anc": {
     "write_indices": {
