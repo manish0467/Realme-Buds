@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-10-18
+
+### Added
+- **Acoustic Ear Safety Failsafe (Hearing Protection)**:
+  - **In-UI Confirmation Gate**: Finding misplaced earbuds now locks into an Ear Safety Lock requiring the user to explicitly type `"realme"` before sound can be played.
+  - **2.5s Gradual Volume Ramp-Up**: Locator sweeps start with a gentle 15% volume chirp and smoothly ramp up over 2.5 seconds, providing a gentle reflex grace period to remove earbuds before full acoustic power.
+  - **CLI Confirmation**: `./realme-buds find` interactively requires typing `'realme'` (with `-y` / `--yes` / `--force` flags for automation).
+- **Custom Equalizer Tuning & Preset Renaming**:
+  - Restored Earbud EQ preset querying on realme Buds T310 by handling firmware-level `0x0122` timeouts.
+  - Persistent custom EQ profiles with 6-band gain adjustments (-12 dB to +12 dB across 64 Hz, 250 Hz, 1 kHz, 4 kHz, 8 kHz, 16 kHz).
+  - Dynamic DSP curve mapping (`infer_base_preset`) translating frequency biases to hardware presets.
+  - Inline Preset Renaming text field directly in the panel UI.
+  - Preloaded curated realme Link tuning profiles: `Custom Profile` (flat), `Bass & Treble`, `Vocal Boost`, and `Deep Bass`.
+  - Quickshell IPC endpoints and CLI commands: `./realme-buds eq status`, `./realme-buds eq list`, `./realme-buds eq set <preset>`, `./realme-buds eq add <name> [gains...]`, and `./realme-buds eq delete <id>`.
+
+### Fixed
+- **Shell Reload Loop**: Relocated persistent user files (`custom_eq.json`, `gestures.json`) outside the plugin directory to `~/.config/omarchy/realme-buds/` with automatic legacy migration, preventing Omarchy's inotify watcher from triggering desktop shell reloads on EQ/gesture saves.
+- **XDG Specification Compliance**: Dynamically resolves `$XDG_CONFIG_HOME` and plugin root relative paths for cross-distro portability.
+- **New EQ Slot Selection**: Fixed UI slot index snapping on new EQ creation so newly created curves are immediately selected, loaded, and editable.
+- **Unit Test Isolation**: Mocked `CONFIG_PATH` in test suites to prevent unit tests from polluting user configuration files with phantom custom profiles.
+
+---
+
 ## [0.2.0] - 2026-10-18
 
 ### Added (Day 1 - Completed ✅)
