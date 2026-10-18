@@ -108,11 +108,27 @@ class EqProfileTests(unittest.TestCase):
 
 
 class EqSessionTests(unittest.TestCase):
-    def session(self, product="063C12"):
-        session = OpoSession(DEVICE, PROFILES[product])
+    def session(self, product="063C12", supports_custom=True):
+        profile = PROFILES[product]
+        if supports_custom and profile.eq and not profile.eq.supports_custom:
+            profile = replace(profile, eq=replace(profile.eq, supports_custom=True))
+        session = OpoSession(DEVICE, profile)
         session._connected = session._authenticated = True
         session._transport = MagicMock()
         return session
+
+    def test_t310_eq_status_skips_query_eq_all_when_unsupported(self):
+        session = self.session(supports_custom=False)
+        session._transport.request.side_effect = [
+            Frame(RESPONSE_EQ, 1, b"\x00\x00"),
+        ]
+        status, _ = session.eq_status()
+        self.assertEqual((status.current_id, status.current_name, status.current_kind), (0, "Balanced", "factory"))
+        self.assertEqual(session._transport.request.call_count, 1)
+        self.assertEqual(
+            [call.args[:3] for call in session._transport.request.call_args_list],
+            [(QUERY_EQ, b"", RESPONSE_EQ)],
+        )
 
     def test_status_uses_fresh_current_and_device_catalogue(self):
         session = self.session()

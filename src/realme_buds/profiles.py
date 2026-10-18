@@ -36,6 +36,14 @@ class EqPresetProfile:
     name: str
     aliases: tuple[str, ...] = ()
 
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "id": self.eq_id,
+            "key": self.key,
+            "name": self.name,
+            "aliases": list(self.aliases),
+        }
+
 
 @dataclass(frozen=True)
 class EqProfile:

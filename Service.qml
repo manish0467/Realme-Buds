@@ -185,6 +185,14 @@ Item {
     return request("set_custom_eq", { entry_id: Number(entryId), gains_db: gains })
   }
 
+  function addCustomEq(name, gains) {
+    return request("add_custom_eq", { name: String(name || "Custom"), gains_db: gains || [0, 0, 0, 0, 0, 0] })
+  }
+
+  function deleteCustomEq(entryId) {
+    return request("delete_custom_eq", { entry_id: Number(entryId) })
+  }
+
   function saveDiagnosticReport(path) {
     return request("save_diagnostic_report", { path: String(path || "") })
   }

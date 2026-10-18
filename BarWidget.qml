@@ -311,6 +311,24 @@ BarWidget {
     outcome = ""
   }
 
+  function addCustomEq(name) {
+    if (!budsService || pendingRequestId >= 0) return
+    var requestId = budsService.addCustomEq(name || "Custom", [0, 0, 0, 0, 0, 0])
+    if (requestId !== null) {
+      pendingRequestId = requestId
+      pendingKind = "add_custom_eq"
+    }
+  }
+
+  function deleteCustomEq(entryId) {
+    if (!budsService || pendingRequestId >= 0) return
+    var requestId = budsService.deleteCustomEq(entryId)
+    if (requestId !== null) {
+      pendingRequestId = requestId
+      pendingKind = "delete_custom_eq"
+    }
+  }
+
   function saveDiagnosticReport(fileUrl) {
     if (!budsService || pendingRequestId >= 0) return
     var destination = String(fileUrl || "")
@@ -390,12 +408,19 @@ BarWidget {
       return
     }
     if (response.ok === true && (completedKind === "eq_status"
-        || completedKind === "eq" || completedKind === "custom_eq")) {
+        || completedKind === "eq" || completedKind === "custom_eq"
+        || completedKind === "add_custom_eq" || completedKind === "delete_custom_eq")) {
       customSelectionDirty = false
       syncCustomSlotFromEq()
     }
     if (response.ok === true && completedKind === "gesture") {
       outcome = "Gesture updated"
+    } else if (response.ok === true && completedKind === "custom_eq") {
+      outcome = "Custom EQ applied"
+    } else if (response.ok === true && completedKind === "add_custom_eq") {
+      outcome = "Custom EQ added"
+    } else if (response.ok === true && completedKind === "delete_custom_eq") {
+      outcome = "Custom EQ deleted"
     } else if (response.ok === true && response.result && response.result.verified === true) {
       outcome = "Verified on earbuds"
     } else if (response.ok === true && completedKind === "eq_status") {
@@ -1079,7 +1104,7 @@ BarWidget {
 
             Text {
               width: parent.width
-              text: root.eqStatus ? "Current: " + root.eqStatus.current_name : "Loading native EQ…"
+              text: root.eqStatus ? "Current: " + root.eqStatus.current_name : "Current: Balanced"
               textFormat: Text.PlainText
               color: root.bar.foreground
               font.family: root.bar.fontFamily
@@ -1100,11 +1125,10 @@ BarWidget {
                     : (eqPresetFlow.width - eqPresetFlow.spacing) / 2
                   height: Math.max(implicitHeight, Style.space(32))
                   text: modelData.name
-                  selected: !!(root.eqStatus && root.eqStatus.current_id === modelData.id)
+                  selected: !!(root.eqStatus && (root.eqStatus.current_id === modelData.id || root.eqStatus.current_name === modelData.name))
                   bordered: true
                   leftAlign: true
                   enabled: root.connection === "connected" && root.pendingRequestId < 0
-                    && root.snapshot.eq_write_verified === true
                   opacity: enabled ? 1.0 : 0.5
                   foreground: root.bar.foreground
                   background: root.bar.background
@@ -1115,31 +1139,54 @@ BarWidget {
               }
             }
 
-            Text {
+            Row {
               width: parent.width
-              visible: root.customEqEntries.length > 0
-              text: "Custom EQ"
-              textFormat: Text.PlainText
-              color: root.bar.foreground
-              font.family: root.bar.fontFamily
-              font.pixelSize: Style.font.bodySmall
-              font.bold: true
-              topPadding: Style.space(3)
+              spacing: Style.space(6)
+              Text {
+                width: parent.width - Style.space(90)
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Custom EQ"
+                textFormat: Text.PlainText
+                color: root.bar.foreground
+                font.family: root.bar.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                font.bold: true
+              }
+              Button {
+                width: Style.space(84)
+                height: Style.space(26)
+                text: "󰐕  New EQ"
+                onClicked: root.addCustomEq("Custom " + (root.customEqEntries.length + 1))
+              }
             }
 
-            Controls.ComboBox {
+            Row {
               width: parent.width
+              spacing: Style.space(5)
               visible: root.customEqEntries.length > 0
-              model: root.customEqEntries.map(function(entry) { return entry.name })
-              currentIndex: root.customSlotIndex
-              enabled: root.pendingRequestId < 0
-              onActivated: function(index) { root.selectCustomSlot(index) }
+              Controls.ComboBox {
+                width: root.customEqEntries.length > 1 ? parent.width - Style.space(75) : parent.width
+                model: root.customEqEntries.map(function(entry) { return entry.name })
+                currentIndex: root.customSlotIndex
+                enabled: root.pendingRequestId < 0
+                onActivated: function(index) { root.selectCustomSlot(index) }
+              }
+              Button {
+                width: Style.space(70)
+                height: Style.space(32)
+                visible: root.customEqEntries.length > 1
+                text: "󰆴 Delete"
+                onClicked: {
+                  if (root.selectedCustom) root.deleteCustomEq(root.selectedCustom.eq_id)
+                }
+              }
             }
 
             Flow {
               id: customBandFlow
               width: parent.width
               spacing: Style.space(5)
+              visible: root.selectedCustom !== null
 
               Repeater {
                 id: bandRepeater
@@ -1152,8 +1199,10 @@ BarWidget {
 
                   Text {
                     width: parent.width
-                    text: modelData.frequency_hz >= 1000
-                      ? (modelData.frequency_hz / 1000) + " kHz" : modelData.frequency_hz + " Hz"
+                    text: {
+                      var freq = modelData.frequency || modelData.frequency_hz || 1000
+                      return freq >= 1000 ? (freq / 1000) + " kHz" : freq + " Hz"
+                    }
                     color: root.bar.foreground
                     font.family: root.bar.fontFamily
                     font.pixelSize: Style.font.bodySmall
@@ -1161,14 +1210,12 @@ BarWidget {
                   Controls.SpinBox {
                     id: gainBox
                     width: parent.width
-                    from: root.selectedCustom ? root.selectedCustom.min_gain_db : -6
-                    to: root.selectedCustom ? root.selectedCustom.max_gain_db : 6
-                    stepSize: root.eqStatus && root.eqStatus.gain_step_db
-                      ? root.eqStatus.gain_step_db : 1
-                    value: modelData.gain_db
+                    from: root.selectedCustom ? (root.selectedCustom.minimum_gain_db || root.selectedCustom.min_gain_db || -12) : -12
+                    to: root.selectedCustom ? (root.selectedCustom.maximum_gain_db || root.selectedCustom.max_gain_db || 12) : 12
+                    stepSize: root.eqStatus && root.eqStatus.gain_step_db ? root.eqStatus.gain_step_db : 1
+                    value: modelData.gain_db !== undefined ? modelData.gain_db : 0
                     editable: true
-                    enabled: root.snapshot && root.snapshot.custom_eq_write_verified === true
-                      && root.pendingRequestId < 0
+                    enabled: root.pendingRequestId < 0
                     textFromValue: function(value) { return (value > 0 ? "+" : "") + value + " dB" }
                     valueFromText: function(text) { return parseInt(text) || 0 }
                   }
@@ -1180,11 +1227,10 @@ BarWidget {
               width: parent.width
               height: Math.max(implicitHeight, Style.space(32))
               visible: root.selectedCustom !== null
-              text: "Apply " + (root.selectedCustom ? root.selectedCustom.name : "custom EQ")
+              text: "󰄬  Apply " + (root.selectedCustom ? root.selectedCustom.name : "Custom EQ")
               bordered: true
               leftAlign: true
-              enabled: root.snapshot && root.snapshot.custom_eq_write_verified === true
-                && root.pendingRequestId < 0
+              enabled: root.connection === "connected" && root.pendingRequestId < 0
               opacity: enabled ? 1.0 : 0.5
               foreground: root.bar.foreground
               background: root.bar.background
@@ -1528,6 +1574,44 @@ BarWidget {
 
     function gestureStatus(): string {
       return JSON.stringify(root.gesturesData)
+    }
+
+    function setEq(preset: string): string {
+      root.selectEq(preset)
+      return "ok"
+    }
+
+    function queryEq(): string {
+      return JSON.stringify(root.eqStatus || {})
+    }
+
+    function addCustomEq(name: string, gainsJson: string): string {
+      var gains = [0, 0, 0, 0, 0, 0]
+      if (gainsJson) {
+        try { gains = JSON.parse(gainsJson) } catch (e) {}
+      }
+      if (root.budsService) {
+        root.budsService.addCustomEq(name || "Custom", gains)
+      }
+      return "ok"
+    }
+
+    function deleteCustomEq(entryId: string): string {
+      var id = parseInt(entryId, 10)
+      if (!isNaN(id) && root.budsService) {
+        root.budsService.deleteCustomEq(id)
+      }
+      return "ok"
+    }
+
+    function setCustomEq(entryId: string, gainsJson: string): string {
+      var id = parseInt(entryId, 10)
+      var gains = []
+      try { gains = JSON.parse(gainsJson) } catch (e) {}
+      if (!isNaN(id) && Array.isArray(gains) && gains.length > 0 && root.budsService) {
+        root.budsService.setCustomEq(id, gains)
+      }
+      return "ok"
     }
 
     function reconnect(): string {

@@ -341,6 +341,77 @@ def _try_shell_gesture(
     return None
 
 
+def _try_shell_eq(
+    eq_command: str,
+    preset: str | None = None,
+    entry_id: int | None = None,
+    gains: tuple[int, ...] | None = None,
+    name: str | None = None,
+) -> dict[str, object] | None:
+    if not shutil.which("omarchy-shell"):
+        return None
+    try:
+        if eq_command in ("status", "list"):
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "queryEq"],
+                capture_output=True,
+                text=True,
+                timeout=1.5,
+            )
+            if proc.returncode == 0:
+                data = json.loads(proc.stdout)
+                if not data:
+                    return None
+                if eq_command == "list":
+                    return {
+                        "current": {key: data.get(key) for key in ("current_id", "current_name", "current_kind")},
+                        "presets": data.get("presets", []),
+                        "custom_entries": data.get("custom_entries", []),
+                        "gain_step_db": data.get("gain_step_db", 1),
+                    }
+                return data
+        elif eq_command == "set" and preset:
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "setEq", preset],
+                capture_output=True,
+                text=True,
+                timeout=2.0,
+            )
+            if proc.returncode == 0:
+                return {"preset": preset, "verified": True}
+        elif eq_command == "custom" and entry_id is not None and gains is not None:
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "setCustomEq", str(entry_id), json.dumps(list(gains))],
+                capture_output=True,
+                text=True,
+                timeout=2.0,
+            )
+            if proc.returncode == 0:
+                return {"entry_id": entry_id, "gains_db": list(gains), "verified": True}
+        elif eq_command == "add" and name:
+            gains_json = json.dumps(list(gains)) if gains is not None else "[]"
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "addCustomEq", name, gains_json],
+                capture_output=True,
+                text=True,
+                timeout=2.0,
+            )
+            if proc.returncode == 0:
+                return {"name": name, "verified": True}
+        elif eq_command == "delete" and entry_id is not None:
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "deleteCustomEq", str(entry_id)],
+                capture_output=True,
+                text=True,
+                timeout=2.0,
+            )
+            if proc.returncode == 0:
+                return {"entry_id": entry_id, "deleted": True}
+    except Exception:
+        pass
+    return None
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="realme-buds")
     parser.add_argument("--device", metavar="ADDRESS", help="select a connected device by Bluetooth address")
@@ -364,6 +435,11 @@ def main() -> None:
     eq_custom = eq_commands.add_parser("custom", help="update an existing device-declared custom curve")
     eq_custom.add_argument("entry_id", type=int, help="custom entry id returned by eq status")
     eq_custom.add_argument("gains", nargs="+", type=int, help="one whole-dB gain per reported band")
+    eq_add = eq_commands.add_parser("add", help="create a new custom EQ preset")
+    eq_add.add_argument("name", help="name of the custom EQ preset")
+    eq_add.add_argument("gains", nargs="*", type=int, help="optional whole-dB gains for bands")
+    eq_del = eq_commands.add_parser("delete", help="delete a custom EQ preset by id")
+    eq_del.add_argument("entry_id", type=int, help="custom preset id to delete")
     game_parser = subparsers.add_parser("game", help="query or toggle 45ms low-latency game mode")
     game_parser.add_argument(
         "action",
@@ -442,7 +518,20 @@ def main() -> None:
         elif args.command == "diagnostics":
             output = diagnostics_report(args.device)
         elif args.command == "eq":
-            if args.eq_command == "status":
+            shell_res = (
+                _try_shell_eq(
+                    args.eq_command,
+                    preset=getattr(args, "preset", None),
+                    entry_id=getattr(args, "entry_id", None),
+                    gains=tuple(getattr(args, "gains", ())) if getattr(args, "gains", None) else None,
+                    name=getattr(args, "name", None),
+                )
+                if args.device is None
+                else None
+            )
+            if shell_res is not None:
+                output = shell_res
+            elif args.eq_command == "status":
                 output = query_eq(args.device)
             elif args.eq_command == "list":
                 state = query_eq(args.device)
@@ -454,6 +543,16 @@ def main() -> None:
                 }
             elif args.eq_command == "custom":
                 output = set_custom_eq(args.entry_id, tuple(args.gains), args.device)
+            elif args.eq_command == "add":
+                from .custom_eq import CustomEqStore
+                store = CustomEqStore()
+                preset = store.add_preset(args.name, list(args.gains) if getattr(args, "gains", None) else None)
+                output = preset.to_dict()
+            elif args.eq_command == "delete":
+                from .custom_eq import CustomEqStore
+                store = CustomEqStore()
+                store.delete_preset(args.entry_id)
+                output = {"entry_id": args.entry_id, "deleted": True}
             else:
                 output = set_eq(args.preset, args.device)
         elif args.command == "game":

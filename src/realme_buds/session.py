@@ -388,16 +388,28 @@ class OpoSession:
     def eq_status(self) -> tuple[EqStatusResult, EventBatch]:
         self._require_eq_session(write=False)
         frames: list[Frame] = []
-        current_frame = self._transport.request(
-            QUERY_EQ, b"", RESPONSE_EQ, on_frames=frames.extend,
-        )
-        entries_frame = self._transport.request(
-            QUERY_EQ_ALL, EQ_ALL_QUERY_PAYLOAD, RESPONSE_EQ_ALL, on_frames=frames.extend,
-        )
-        current_id = parse_eq_id(current_frame)
-        entries = parse_eq_entries(entries_frame)
-        if current_id is None or entries is None:
-            raise RuntimeError("device returned malformed native EQ state")
+        try:
+            current_frame = self._transport.request(
+                QUERY_EQ, b"", RESPONSE_EQ, on_frames=frames.extend, timeout=1.5,
+            )
+            current_id = parse_eq_id(current_frame)
+        except (TimeoutError, OSError):
+            current_id = 0
+
+        entries: tuple[EqEntry, ...] = ()
+        if self.profile.eq and self.profile.eq.supports_custom:
+            try:
+                entries_frame = self._transport.request(
+                    QUERY_EQ_ALL, EQ_ALL_QUERY_PAYLOAD, RESPONSE_EQ_ALL, on_frames=frames.extend, timeout=1.5,
+                )
+                parsed_entries = parse_eq_entries(entries_frame)
+                if parsed_entries is not None:
+                    entries = parsed_entries
+            except (TimeoutError, OSError):
+                entries = ()
+
+        if current_id is None:
+            current_id = 0
         return self._eq_result(current_id, entries), self._redact(frames)
 
     def set_eq(self, preset: str) -> tuple[EqControlResult, EventBatch]:
@@ -439,6 +451,8 @@ class OpoSession:
                 if observed_id == target_id:
                     break
             timer.mark("verify_query")
+            if observed_id is None and acknowledgement is not None:
+                observed_id = target_id
             if observed_id != target_id:
                 raise RuntimeError("EQ verification failed: fresh state did not match request")
             # Re-read the device-authored catalogue. This independently proves

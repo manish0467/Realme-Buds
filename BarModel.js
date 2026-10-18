@@ -94,12 +94,15 @@ function currentAncMode(snapshot) {
 
 function eqPresets(snapshot) {
   var eq = snapshot && snapshot.eq
-  return eq && Array.isArray(eq.presets) ? eq.presets : []
+  if (eq && Array.isArray(eq.presets) && eq.presets.length > 0) return eq.presets
+  if (snapshot && Array.isArray(snapshot.eq_presets) && snapshot.eq_presets.length > 0) return snapshot.eq_presets
+  return []
 }
 
 function customEqEntries(snapshot) {
   var eq = snapshot && snapshot.eq
-  return eq && Array.isArray(eq.custom_entries) ? eq.custom_entries : []
+  if (eq && Array.isArray(eq.custom_entries)) return eq.custom_entries
+  return []
 }
 
 function compatibility(snapshot) {
