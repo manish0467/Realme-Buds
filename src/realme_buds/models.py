@@ -127,6 +127,24 @@ class EventBatch:
 
 
 @dataclass(frozen=True)
+class GestureStatusResult:
+    left: dict[str, str]
+    right: dict[str, str]
+    actions: tuple[dict[str, object], ...]
+    long_press_anc_modes: tuple[str, ...]
+    items: tuple[dict[str, object], ...] = ()
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "left": self.left,
+            "right": self.right,
+            "actions": list(self.actions),
+            "long_press_anc_modes": list(self.long_press_anc_modes),
+            "items": list(self.items),
+        }
+
+
+@dataclass(frozen=True)
 class ControllerSnapshot:
     status: StatusResult | None
     feature_switches: dict[str, bool]
@@ -137,3 +155,5 @@ class ControllerSnapshot:
     reconnect_count: int
     generation: int
     eq_status: EqStatusResult | None = None
+    gestures: GestureStatusResult | None = None
+

@@ -17,6 +17,7 @@ This is an independent project, unaffiliated with realme or OPPO.
 - In-ear capacitive wear detection switch and desktop MPRIS media auto-pause/resume hook.
 - Dual-device / Multipoint connection switch for simultaneous PC + smartphone pairing.
 - "Find My Buds" acoustic locator chime with independent Left / Right / Both channels and hearing safety gates.
+- Touch Gesture Remapping for Left and Right earbuds (Double Tap, Triple Tap, Touch & Hold) with customizable noise control cycle (ANC ↔ Transparency).
 - Icon-only idle widget; hover reveals known batteries (with charging indicators), with delayed collapse.
 - Responsive panel with full-width device status, balanced ANC/EQ columns when
   space permits, and a compact scrolling fallback on narrow displays.
@@ -176,6 +177,13 @@ Re-enable afterward to resume monitoring.
 ./realme-buds find right           # Ring right earbud only
 ./realme-buds find both            # Ring both earbuds
 ./realme-buds find stop            # Immediately stop ringing
+
+# Touch Gesture Remapping & Tap Customization
+./realme-buds gesture status       # Show current touch gesture mappings (or: ./realme-buds touch status)
+./realme-buds gesture list         # List supported gesture actions
+./realme-buds gesture set left double_tap next_track
+./realme-buds gesture set right long_press anc_cycle
+./realme-buds gesture anc-modes anc transparency   # Cycle ANC ↔ Transparency (skips Off)
 
 # Control noise cancellation directly
 ./realme-buds anc status

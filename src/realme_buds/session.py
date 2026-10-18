@@ -41,6 +41,10 @@ from .protocol import (
     RESPONSE_SET_FEATURE,
     STATUS_QUERY_PAYLOAD,
     SUBSCRIBE_BROADCAST,
+    QUERY_GESTURE,
+    SET_GESTURE,
+    RESPONSE_GESTURE,
+    RESPONSE_SET_GESTURE,
     Frame,
     FEATURE_SWITCH_NAMES,
     FEATURE_SWITCH_IDS,
@@ -57,6 +61,14 @@ from .protocol import (
     parse_set_anc_status,
     parse_set_eq_status,
     parse_set_feature_status,
+    parse_set_gesture_status,
+)
+from .gestures import (
+    GestureConfig,
+    GestureStore,
+    default_gesture_config,
+    encode_set_gesture_payload,
+    parse_gesture_payload,
 )
 from .transport import RfcommTransport, Transport
 
@@ -84,6 +96,65 @@ class OpoSession:
         self.battery_poll_interval = battery_poll_interval
         self._last_battery_poll = monotonic()
         self._battery_pending = False
+        self._gesture_store = GestureStore()
+        self._gestures = self._gesture_store.load()
+
+    def query_gestures(self) -> GestureConfig:
+        """Query touch gesture assignments from connected earbuds."""
+        self._require_connected()
+        received: list[Frame] = []
+        try:
+            frame = self._transport.request(
+                QUERY_GESTURE, b"", RESPONSE_GESTURE, on_frames=received.extend, timeout=1.0
+            )
+            parsed = parse_gesture_payload(frame.payload)
+            if parsed is not None:
+                stored = self._gesture_store.load(fallback=parsed)
+                self._gestures = parsed.with_anc_modes(stored.long_press_anc_modes)
+                self._gesture_store.save(self._gestures)
+        except Exception:
+            pass
+        return self._gestures
+
+    def set_gesture(self, side: str, trigger: str, action: str) -> tuple[bool, EventBatch]:
+        """Configure touch gesture assignment on the earbuds and local profile."""
+        self._require_connected()
+        if not self._authenticated:
+            raise RuntimeError("session authentication has not completed")
+        payload = encode_set_gesture_payload(side, trigger, action)
+        received: list[Frame] = []
+        success = True
+        try:
+            frame = self._transport.request(
+                SET_GESTURE,
+                payload,
+                RESPONSE_SET_GESTURE,
+                on_frames=received.extend,
+                timeout=0.8,
+            )
+            status = parse_set_gesture_status(frame)
+            if status is not None and status != 0:
+                success = False
+        except Exception:
+            pass
+
+        self._gestures = self._gestures.with_action(side, trigger, action)
+        self._gesture_store.save(self._gestures)
+
+        events: list[SafeEvent] = []
+        for recv_frame in received:
+            event = self._safe_event(recv_frame)
+            if event is not None:
+                events.append(event)
+        events.append(SafeEvent("gestures", self._gestures.to_dict()))
+        return success, EventBatch(tuple(events), 0)
+
+    def set_gesture_anc_modes(self, modes: tuple[str, ...]) -> tuple[bool, EventBatch]:
+        """Configure the noise control modes cycled during long-press."""
+        self._gestures = self._gestures.with_anc_modes(modes)
+        self._gesture_store.save(self._gestures)
+        return True, EventBatch((SafeEvent("gestures", self._gestures.to_dict()),), 0)
+
 
     def request_battery(self) -> None:
         self._battery_pending = True
@@ -555,8 +626,16 @@ class OpoSession:
                 if feature in switches
             }
             return SafeEvent("feature_switches", named)
+        if frame.command == RESPONSE_GESTURE:
+            parsed = parse_gesture_payload(frame.payload)
+            if parsed is not None:
+                self._gestures = parsed.with_anc_modes(self._gestures.long_press_anc_modes)
+                self._gesture_store.save(self._gestures)
+                return SafeEvent("gestures", self._gestures.to_dict())
+            return None
         if frame.command == NOTIFY_STATE and frame.payload:
             return SafeEvent("notification", {"event_code": frame.payload[0]})
+
         return None
 
     def _require_connected(self) -> None:

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "realme-buds.control",
   "name": "realme Buds Control",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "Alenbosh",
   "description": "Native realme earbuds controls for Omarchy. Hardware verified on realme Buds T310.",
   "kinds": ["service", "bar-widget"],

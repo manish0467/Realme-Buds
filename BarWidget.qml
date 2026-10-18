@@ -60,6 +60,10 @@ BarWidget {
   property bool locatorRinging: false
   property string locatorTarget: ""
   property bool locatorCardOpen: false
+  readonly property bool gestureAvailable: !!(snapshot && snapshot.capabilities
+    && snapshot.capabilities.indexOf("gestures") !== -1)
+  readonly property var gesturesData: BarModel.gestures(snapshot)
+  property bool gestureCardOpen: false
   readonly property bool useTwoColumnLayout: eqAvailable
     && popup.availableCardWidth >= Style.space(560)
   readonly property int panelHeight: popup.contentHeight
@@ -254,6 +258,36 @@ BarWidget {
     }
   }
 
+  function setGesture(side, trigger, action) {
+    if (!budsService || connection !== "connected" || pendingRequestId >= 0) return
+    var requestId = budsService.setGesture(side, trigger, action)
+    if (requestId === null) {
+      outcome = "Could not start request"
+      return
+    }
+    pendingRequestId = requestId
+    pendingMode = side + "_" + trigger
+    pendingKind = "gesture"
+    outcome = ""
+  }
+
+  function setGestureAncModes(modes) {
+    if (!budsService || connection !== "connected" || pendingRequestId >= 0) return
+    var requestId = budsService.setGestureAncModes(modes)
+    if (requestId === null) {
+      outcome = "Could not start request"
+      return
+    }
+    pendingRequestId = requestId
+    pendingMode = "anc_modes"
+    pendingKind = "gesture"
+    outcome = ""
+  }
+
+  function toggleGestureCard() {
+    gestureCardOpen = !gestureCardOpen
+  }
+
   function selectEq(value) {
     if (!budsService || connection !== "connected" || pendingRequestId >= 0) return
     var requestId = budsService.setEq(value)
@@ -360,7 +394,9 @@ BarWidget {
       customSelectionDirty = false
       syncCustomSlotFromEq()
     }
-    if (response.ok === true && response.result && response.result.verified === true) {
+    if (response.ok === true && completedKind === "gesture") {
+      outcome = "Gesture updated"
+    } else if (response.ok === true && response.result && response.result.verified === true) {
       outcome = "Verified on earbuds"
     } else if (response.ok === true && completedKind === "eq_status") {
       outcome = ""
@@ -777,6 +813,239 @@ BarWidget {
                   accent: Color.accent
                   fontFamily: root.bar.fontFamily
                   onClicked: root.stopRingBuds()
+                }
+              }
+
+              Button {
+                id: gesturesButton
+                width: featureColumn.width
+                height: Math.max(implicitHeight, Style.space(32))
+                text: "󰈈  Touch Gestures"
+                selected: root.gestureCardOpen
+                bordered: true
+                leftAlign: true
+                enabled: root.connection === "connected" && root.pendingRequestId < 0
+                opacity: enabled ? 1.0 : 0.5
+                foreground: root.bar.foreground
+                background: root.bar.background
+                accent: Color.accent
+                fontFamily: root.bar.fontFamily
+                focusable: true
+                visible: root.gestureAvailable
+                onActiveFocusChanged: if (activeFocus) panelScroll.reveal(this)
+                Keys.onDownPressed: nextItemInFocusChain().forceActiveFocus(Qt.TabFocusReason)
+                Keys.onUpPressed: nextItemInFocusChain(false).forceActiveFocus(Qt.BacktabFocusReason)
+                Keys.onEscapePressed: root.close()
+                onClicked: root.toggleGestureCard()
+              }
+
+              Column {
+                id: gestureCard
+                width: featureColumn.width
+                visible: root.gestureCardOpen
+                spacing: Style.space(5)
+
+                Text {
+                  width: parent.width
+                  text: "Left Earbud"
+                  textFormat: Text.PlainText
+                  color: root.bar.foreground
+                  font.family: root.bar.fontFamily
+                  font.pixelSize: Style.font.bodySmall
+                  font.bold: true
+                }
+
+                Row {
+                  width: parent.width
+                  spacing: Style.space(4)
+                  Text {
+                    width: Style.space(80)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Double Tap"
+                    textFormat: Text.PlainText
+                    color: root.bar.foreground
+                    font.family: root.bar.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                  }
+                  Controls.ComboBox {
+                    id: leftDoubleTapCombo
+                    width: parent.width - Style.space(84)
+                    model: ["Next Track", "Play / Pause", "Previous Track", "Voice Assistant", "Game Mode", "Noise Control", "Volume Up", "Volume Down", "Disabled"]
+                    property var actionKeys: ["next_track", "play_pause", "prev_track", "voice_assistant", "game_mode", "anc_cycle", "volume_up", "volume_down", "none"]
+                    currentIndex: Math.max(0, actionKeys.indexOf(root.gesturesData && root.gesturesData.left ? root.gesturesData.left.double_tap : "next_track"))
+                    enabled: root.pendingRequestId < 0
+                    onActivated: function(index) { root.setGesture("left", "double_tap", actionKeys[index]) }
+                  }
+                }
+
+                Row {
+                  width: parent.width
+                  spacing: Style.space(4)
+                  Text {
+                    width: Style.space(80)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Triple Tap"
+                    textFormat: Text.PlainText
+                    color: root.bar.foreground
+                    font.family: root.bar.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                  }
+                  Controls.ComboBox {
+                    id: leftTripleTapCombo
+                    width: parent.width - Style.space(84)
+                    model: ["Disabled", "Previous Track", "Next Track", "Voice Assistant", "Game Mode", "Play / Pause"]
+                    property var actionKeys: ["none", "prev_track", "next_track", "voice_assistant", "game_mode", "play_pause"]
+                    currentIndex: Math.max(0, actionKeys.indexOf(root.gesturesData && root.gesturesData.left ? root.gesturesData.left.triple_tap : "none"))
+                    enabled: root.pendingRequestId < 0
+                    onActivated: function(index) { root.setGesture("left", "triple_tap", actionKeys[index]) }
+                  }
+                }
+
+                Row {
+                  width: parent.width
+                  spacing: Style.space(4)
+                  Text {
+                    width: Style.space(80)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Touch & Hold"
+                    textFormat: Text.PlainText
+                    color: root.bar.foreground
+                    font.family: root.bar.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                  }
+                  Controls.ComboBox {
+                    id: leftLongPressCombo
+                    width: parent.width - Style.space(84)
+                    model: ["Disabled", "Noise Control", "Game Mode", "Voice Assistant"]
+                    property var actionKeys: ["none", "anc_cycle", "game_mode", "voice_assistant"]
+                    currentIndex: Math.max(0, actionKeys.indexOf(root.gesturesData && root.gesturesData.left ? root.gesturesData.left.long_press : "none"))
+                    enabled: root.pendingRequestId < 0
+                    onActivated: function(index) { root.setGesture("left", "long_press", actionKeys[index]) }
+                  }
+                }
+
+                Text {
+                  width: parent.width
+                  text: "Right Earbud"
+                  textFormat: Text.PlainText
+                  color: root.bar.foreground
+                  font.family: root.bar.fontFamily
+                  font.pixelSize: Style.font.bodySmall
+                  font.bold: true
+                  topPadding: Style.space(4)
+                }
+
+                Row {
+                  width: parent.width
+                  spacing: Style.space(4)
+                  Text {
+                    width: Style.space(80)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Double Tap"
+                    textFormat: Text.PlainText
+                    color: root.bar.foreground
+                    font.family: root.bar.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                  }
+                  Controls.ComboBox {
+                    id: rightDoubleTapCombo
+                    width: parent.width - Style.space(84)
+                    model: ["Play / Pause", "Next Track", "Previous Track", "Voice Assistant", "Game Mode", "Noise Control", "Volume Up", "Volume Down", "Disabled"]
+                    property var actionKeys: ["play_pause", "next_track", "prev_track", "voice_assistant", "game_mode", "anc_cycle", "volume_up", "volume_down", "none"]
+                    currentIndex: Math.max(0, actionKeys.indexOf(root.gesturesData && root.gesturesData.right ? root.gesturesData.right.double_tap : "play_pause"))
+                    enabled: root.pendingRequestId < 0
+                    onActivated: function(index) { root.setGesture("right", "double_tap", actionKeys[index]) }
+                  }
+                }
+
+                Row {
+                  width: parent.width
+                  spacing: Style.space(4)
+                  Text {
+                    width: Style.space(80)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Triple Tap"
+                    textFormat: Text.PlainText
+                    color: root.bar.foreground
+                    font.family: root.bar.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                  }
+                  Controls.ComboBox {
+                    id: rightTripleTapCombo
+                    width: parent.width - Style.space(84)
+                    model: ["Disabled", "Next Track", "Previous Track", "Voice Assistant", "Game Mode", "Play / Pause"]
+                    property var actionKeys: ["none", "next_track", "prev_track", "voice_assistant", "game_mode", "play_pause"]
+                    currentIndex: Math.max(0, actionKeys.indexOf(root.gesturesData && root.gesturesData.right ? root.gesturesData.right.triple_tap : "none"))
+                    enabled: root.pendingRequestId < 0
+                    onActivated: function(index) { root.setGesture("right", "triple_tap", actionKeys[index]) }
+                  }
+                }
+
+                Row {
+                  width: parent.width
+                  spacing: Style.space(4)
+                  Text {
+                    width: Style.space(80)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Touch & Hold"
+                    textFormat: Text.PlainText
+                    color: root.bar.foreground
+                    font.family: root.bar.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                  }
+                  Controls.ComboBox {
+                    id: rightLongPressCombo
+                    width: parent.width - Style.space(84)
+                    model: ["Noise Control", "Game Mode", "Voice Assistant", "Disabled"]
+                    property var actionKeys: ["anc_cycle", "game_mode", "voice_assistant", "none"]
+                    currentIndex: Math.max(0, actionKeys.indexOf(root.gesturesData && root.gesturesData.right ? root.gesturesData.right.long_press : "anc_cycle"))
+                    enabled: root.pendingRequestId < 0
+                    onActivated: function(index) { root.setGesture("right", "long_press", actionKeys[index]) }
+                  }
+                }
+
+                Text {
+                  width: parent.width
+                  text: "Long-Press Noise Modes"
+                  textFormat: Text.PlainText
+                  color: root.bar.foreground
+                  font.family: root.bar.fontFamily
+                  font.pixelSize: Style.font.bodySmall
+                  font.bold: true
+                  topPadding: Style.space(4)
+                }
+
+                Row {
+                  width: parent.width
+                  spacing: Style.space(4)
+
+                  Button {
+                    width: (parent.width - Style.space(4)) / 2
+                    height: Math.max(implicitHeight, Style.space(28))
+                    text: "ANC ↔ Transp"
+                    selected: !(root.gesturesData && root.gesturesData.long_press_anc_modes
+                      && root.gesturesData.long_press_anc_modes.indexOf("off") !== -1)
+                    bordered: true
+                    foreground: root.bar.foreground
+                    background: root.bar.background
+                    accent: Color.accent
+                    fontFamily: root.bar.fontFamily
+                    onClicked: root.setGestureAncModes(["anc", "transparency"])
+                  }
+
+                  Button {
+                    width: (parent.width - Style.space(4)) / 2
+                    height: Math.max(implicitHeight, Style.space(28))
+                    text: "+ Off (All 3)"
+                    selected: !!(root.gesturesData && root.gesturesData.long_press_anc_modes
+                      && root.gesturesData.long_press_anc_modes.indexOf("off") !== -1)
+                    bordered: true
+                    foreground: root.bar.foreground
+                    background: root.bar.background
+                    accent: Color.accent
+                    fontFamily: root.bar.fontFamily
+                    onClicked: root.setGestureAncModes(["anc", "transparency", "off"])
+                  }
                 }
               }
             }
@@ -1235,6 +1504,25 @@ BarWidget {
       })
     }
 
+    function setGesture(side: string, trigger: string, action: string): string {
+      root.setGesture(side, trigger, action)
+      return "ok"
+    }
+
+    function setGestureAncModes(modesJson: string): string {
+      try {
+        var modes = JSON.parse(modesJson)
+        root.setGestureAncModes(modes)
+      } catch (e) {
+        root.setGestureAncModes(["anc", "transparency"])
+      }
+      return "ok"
+    }
+
+    function gestureStatus(): string {
+      return JSON.stringify(root.gesturesData)
+    }
+
     function status(): string {
       return JSON.stringify({
         service: root.budsService !== null,
@@ -1264,6 +1552,8 @@ BarWidget {
         multipoint_available: root.multipointAvailable,
         ringing: root.locatorRinging,
         ringing_target: root.locatorTarget,
+        gestures: root.gesturesData,
+        gestures_available: root.gestureAvailable,
         pending: root.pendingRequestId >= 0,
         eq: root.eqStatus,
         compatibility: root.compatibilityKind,

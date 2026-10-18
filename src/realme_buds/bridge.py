@@ -50,6 +50,7 @@ def serialize_snapshot(snapshot: ControllerSnapshot) -> JsonObject:
         "ignored_frames": snapshot.ignored_frames,
         "reconnect_count": snapshot.reconnect_count,
         "generation": snapshot.generation,
+        "gestures": snapshot.gestures.to_dict() if snapshot.gestures else None,
     }
 
 
@@ -229,6 +230,27 @@ class BudsFrontendBridge:
             elif command == "ring_status":
                 self._require_parameters(command, params, set())
                 result = self.locator.get_state()
+            elif command == "gesture_status":
+                self._require_parameters(command, params, set())
+                result = self.controller.gesture_status().to_dict()
+                self._on_snapshot(self.controller.snapshot())
+            elif command == "set_gesture":
+                self._require_parameters(command, params, {"side", "trigger", "action"})
+                side = str(params["side"])
+                trigger = str(params["trigger"])
+                action = str(params["action"])
+                success, snapshot = self.controller.set_gesture_with_snapshot(side, trigger, action)
+                result = {"side": side, "trigger": trigger, "action": action, "success": success}
+                self._on_snapshot(snapshot)
+            elif command == "set_gesture_anc_modes":
+                self._require_parameters(command, params, {"modes"})
+                modes_raw = params["modes"]
+                if not isinstance(modes_raw, list):
+                    raise ValueError("set_gesture_anc_modes parameter 'modes' must be a list of strings")
+                modes = tuple(str(m) for m in modes_raw)
+                success, snapshot = self.controller.set_gesture_anc_modes(modes)
+                result = {"modes": list(modes), "success": success}
+                self._on_snapshot(snapshot)
             elif command == "save_diagnostic_report":
                 self._require_parameters(command, params, {"path"})
                 path = params["path"]

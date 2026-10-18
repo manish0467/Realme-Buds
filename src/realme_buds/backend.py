@@ -396,5 +396,38 @@ def diagnostics_report(address: str | None = None) -> dict[str, object]:
     return build_status_report(status)
 
 
+def query_gestures(address: str | None = None) -> dict[str, object]:
+    device = select_device(address)
+    session, _status, _events = OpoSession.bootstrap(device)
+    try:
+        config = session.query_gestures()
+        return config.to_dict()
+    finally:
+        session.__exit__(None, None, None)
+
+
+def set_gesture(side: str, trigger: str, action: str, address: str | None = None) -> dict[str, object]:
+    device = select_device(address)
+    session, _status, _events = OpoSession.bootstrap(device)
+    try:
+        success, _batch = session.set_gesture(side, trigger, action)
+        config = session._gestures
+        return {"success": success, "gestures": config.to_dict()}
+    finally:
+        session.__exit__(None, None, None)
+
+
+def set_gesture_anc_modes(modes: tuple[str, ...], address: str | None = None) -> dict[str, object]:
+    device = select_device(address)
+    session, _status, _events = OpoSession.bootstrap(device)
+    try:
+        success, _batch = session.set_gesture_anc_modes(modes)
+        config = session._gestures
+        return {"success": success, "gestures": config.to_dict()}
+    finally:
+        session.__exit__(None, None, None)
+
+
+
 def _frame_summary(frames: list[Frame]) -> str:
     return ", ".join(f"0x{frame.command:04x}:{frame.payload.hex()}" for frame in frames) or "none"

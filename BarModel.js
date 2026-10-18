@@ -204,6 +204,30 @@ function presentation(connection, snapshot) {
   }
 }
 
+function gestures(snapshot) {
+  return (snapshot && snapshot.gestures) || {
+    left: { double_tap: "next_track", triple_tap: "none", long_press: "none" },
+    right: { double_tap: "play_pause", triple_tap: "none", long_press: "anc_cycle" },
+    long_press_anc_modes: ["anc", "transparency"],
+    actions: []
+  }
+}
+
+function gestureActionLabel(actionKey) {
+  var labels = {
+    none: "Disabled",
+    play_pause: "Play / Pause",
+    prev_track: "Previous Track",
+    next_track: "Next Track",
+    voice_assistant: "Voice Assistant",
+    game_mode: "Game Mode",
+    anc_cycle: "Noise Control",
+    volume_up: "Volume Up",
+    volume_down: "Volume Down"
+  }
+  return labels[actionKey] || titleCase(actionKey)
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     batteryParts: batteryParts,
@@ -212,6 +236,8 @@ if (typeof module !== "undefined") {
     currentAncMode: currentAncMode,
     eqPresets: eqPresets,
     customEqEntries: customEqEntries,
+    gestures: gestures,
+    gestureActionLabel: gestureActionLabel,
     compatibility: compatibility,
     compatibilityLabel: compatibilityLabel,
     reportActionLabel: reportActionLabel,

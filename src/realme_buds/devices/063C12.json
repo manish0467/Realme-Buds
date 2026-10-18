@@ -15,7 +15,8 @@
     "game_mode",
     "wear_detection",
     "multipoint",
-    "locator"
+    "locator",
+    "gestures"
   ],
   "anc": {
     "write_indices": {

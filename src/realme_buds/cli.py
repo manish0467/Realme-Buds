@@ -7,10 +7,11 @@ import shutil
 import subprocess
 
 from .backend import (cycle_anc, device_summary, diagnostics_report, query_capabilities, query_eq,
-                      query_game_mode, query_multipoint, query_status, query_wear_detection, ring_buds,
-                      ring_status, set_anc, set_custom_eq, set_eq, set_game_mode, set_multipoint,
-                      set_wear_detection, stop_ring_buds)
+                      query_game_mode, query_gestures, query_multipoint, query_status, query_wear_detection, ring_buds,
+                      ring_status, set_anc, set_custom_eq, set_eq, set_game_mode, set_gesture, set_gesture_anc_modes,
+                      set_multipoint, set_wear_detection, stop_ring_buds)
 from .bluez import connected_devices
+from .gestures import ACTION_DEFINITIONS
 
 
 def _try_shell_cycle_anc() -> dict[str, object] | None:
@@ -275,6 +276,71 @@ def _try_shell_find(action: str) -> dict[str, object] | None:
     return None
 
 
+def _try_shell_status() -> dict[str, object] | None:
+    if not shutil.which("omarchy-shell"):
+        return None
+    try:
+        proc = subprocess.run(
+            ["omarchy-shell", "realme-buds.control", "status"],
+            capture_output=True,
+            text=True,
+            timeout=1.5,
+        )
+        if proc.returncode == 0:
+            data = json.loads(proc.stdout)
+            dev_status = data.get("device_status")
+            if dev_status:
+                return dev_status
+    except Exception:
+        pass
+    return None
+
+
+def _try_shell_gesture(
+    command: str,
+    side: str | None = None,
+    trigger: str | None = None,
+    action: str | None = None,
+    modes: list[str] | None = None,
+) -> dict[str, object] | None:
+    if not shutil.which("omarchy-shell"):
+        return None
+    try:
+        if command in ("status", "list"):
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "gestureStatus"],
+                capture_output=True,
+                text=True,
+                timeout=1.5,
+            )
+            if proc.returncode == 0:
+                data = json.loads(proc.stdout)
+                if command == "list":
+                    return {"actions": data.get("actions", [])}
+                return data
+        elif command == "set" and side and trigger and action:
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "setGesture", side, trigger, action],
+                capture_output=True,
+                text=True,
+                timeout=2.0,
+            )
+            if proc.returncode == 0:
+                return {"side": side, "trigger": trigger, "action": action, "verified": True}
+        elif command == "anc-modes" and modes:
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "setGestureAncModes", json.dumps(modes)],
+                capture_output=True,
+                text=True,
+                timeout=2.0,
+            )
+            if proc.returncode == 0:
+                return {"long_press_anc_modes": modes, "verified": True}
+    except Exception:
+        pass
+    return None
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="realme-buds")
     parser.add_argument("--device", metavar="ADDRESS", help="select a connected device by Bluetooth address")
@@ -346,6 +412,20 @@ def main() -> None:
         default="status",
         help="acoustic locator action: left, right, both, stop, status (default: status)",
     )
+    gesture_parser = subparsers.add_parser(
+        "gesture",
+        aliases=["touch"],
+        help="query or configure touch gesture tap controls",
+    )
+    gesture_commands = gesture_parser.add_subparsers(dest="gesture_command", required=False)
+    gesture_commands.add_parser("status", help="show current touch gesture mappings")
+    gesture_commands.add_parser("list", help="list supported gesture actions")
+    gesture_set = gesture_commands.add_parser("set", help="set a touch gesture action")
+    gesture_set.add_argument("side", choices=("left", "right"), help="earbud side")
+    gesture_set.add_argument("trigger", choices=("double_tap", "triple_tap", "long_press"), help="tap trigger")
+    gesture_set.add_argument("action", help="action to assign (e.g. next_track, play_pause, anc_cycle)")
+    gesture_anc = gesture_commands.add_parser("anc-modes", help="configure long-press noise control modes")
+    gesture_anc.add_argument("modes", nargs="+", choices=("anc", "transparency", "off"), help="modes to cycle on long-press")
     args = parser.parse_args()
     try:
         if args.command == "devices":
@@ -355,7 +435,8 @@ def main() -> None:
                 if device.looks_compatible
             ]
         elif args.command == "status":
-            output = query_status(args.device)
+            shell_res = _try_shell_status() if args.device is None else None
+            output = shell_res if shell_res is not None else query_status(args.device)
         elif args.command == "capabilities":
             output = query_capabilities(args.device)
         elif args.command == "diagnostics":
@@ -456,6 +537,41 @@ def main() -> None:
                 output = shell_res if shell_res is not None else cycle_anc(args.device)
             else:
                 output = set_anc(args.mode, args.device)
+        elif args.command in ("gesture", "touch"):
+            subcmd = getattr(args, "gesture_command", None) or "status"
+            if subcmd == "list":
+                output = {
+                    "actions": [
+                        {"key": k, "label": v["label"], "id": v["id"]}
+                        for k, v in ACTION_DEFINITIONS.items()
+                    ]
+                }
+            elif subcmd == "set":
+                shell_res = (
+                    _try_shell_gesture("set", side=args.side, trigger=args.trigger, action=args.action)
+                    if args.device is None
+                    else None
+                )
+                if shell_res is not None:
+                    output = shell_res
+                else:
+                    output = set_gesture(args.side, args.trigger, args.action, args.device)
+            elif subcmd == "anc-modes":
+                shell_res = (
+                    _try_shell_gesture("anc-modes", modes=args.modes)
+                    if args.device is None
+                    else None
+                )
+                if shell_res is not None:
+                    output = shell_res
+                else:
+                    output = set_gesture_anc_modes(tuple(args.modes), args.device)
+            else:
+                shell_res = _try_shell_gesture("status") if args.device is None else None
+                if shell_res is not None:
+                    output = shell_res
+                else:
+                    output = query_gestures(args.device)
         print(json.dumps(output, indent=2))
     except (OSError, RuntimeError, ValueError) as error:
         parser.exit(1, f"realme-buds: {error}\n")

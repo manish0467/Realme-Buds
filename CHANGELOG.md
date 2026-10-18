@@ -63,8 +63,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI commands: `./realme-buds find status`, `./realme-buds find left`, `./realme-buds find right`, `./realme-buds find both`, and `./realme-buds find stop` (with `./realme-buds ring` shorthand alias).
 - Quickshell IPC endpoints `ringBuds`, `stopRingBuds`, and `ringStatus`.
 
-### Planned (Daily Shipping Roadmap)
-- **Day 7**: Touch gesture remapping for physical tap controls.
+### Added (Day 7 - Completed ✅)
+- Touch Gesture Remapping for physical earbud tap controls (`src/realme_buds/gestures.py`):
+  - Decoded native OPO `0x0108` gesture query and `0x0407` gesture write frames.
+  - Independent customization of Left and Right earbud tap triggers:
+    - Double Tap (`double_tap`)
+    - Triple Tap (`triple_tap`)
+    - Touch & Hold / Long Press (`long_press`)
+  - Supported action mappings: Play/Pause, Next Track, Previous Track, Voice Assistant, Game Mode Toggle, Noise Control Cycle, Volume Up, Volume Down, Disabled.
+  - Long-press noise control cycle customization: option to cycle exclusively between `ANC ↔ Transparency` (skipping Off) or all 3 modes (`ANC ↔ Transparency ↔ Off`).
+  - Persistent gesture configuration (`GestureStore`) across earbud reconnects and reboots.
+- UI Gesture configuration card in `BarWidget.qml`:
+  - Visual selector button (`󰈈  Touch Gestures`).
+  - Dropdown ComboBoxes for Double Tap, Triple Tap, and Touch & Hold for Left and Right earbuds.
+  - Interactive segmented toggle for Long-Press Noise Modes (`ANC ↔ Transp` vs `+ Off (All 3)`).
+- CLI commands:
+  - `./realme-buds gesture status` (or `./realme-buds touch status`)
+  - `./realme-buds gesture list`
+  - `./realme-buds gesture set <side> <trigger> <action>`
+  - `./realme-buds gesture anc-modes <modes...>`
+  - Automatic fast Omarchy shell session delegation and direct RFCOMM fallback.
+- Quickshell IPC endpoints `setGesture`, `setGestureAncModes`, and `gestureStatus`.
+- 12 new unit tests in `tests/test_gestures.py` bringing the test suite to 198/198 passing tests.
+
 
 ---
 

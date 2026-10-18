@@ -16,14 +16,17 @@ QUERY_ANC = 0x010C
 QUERY_STATUS = 0x010D
 QUERY_EQ = 0x010F
 QUERY_EQ_ALL = 0x0122
+QUERY_GESTURE = 0x0108
 SET_FEATURE = 0x0403
 SET_ANC = 0x0404
 SET_EQ = 0x0406
 SET_EQ_DETAIL = 0x0418
+SET_GESTURE = 0x0407
 RESPONSE_SET_FEATURE = 0x8403
 RESPONSE_SET_ANC = 0x8404
 RESPONSE_SET_EQ = 0x8406
 RESPONSE_SET_EQ_DETAIL = 0x8418
+RESPONSE_SET_GESTURE = 0x8407
 
 RESPONSE_PRODUCT_ID = 0x8103
 RESPONSE_REMOTE_VERSION = 0x8105
@@ -32,6 +35,7 @@ RESPONSE_ANC = 0x810C
 RESPONSE_STATUS = 0x810D
 RESPONSE_EQ = 0x810F
 RESPONSE_EQ_ALL = 0x8122
+RESPONSE_GESTURE = 0x8108
 NOTIFY_STATE = 0x0204
 NOTIFY_EQ = 0x0504
 RESPONSE_BROADCAST_CODES = 0x8200
@@ -305,6 +309,13 @@ def parse_set_feature_status(frame: Frame) -> int | None:
     if frame.command != RESPONSE_SET_FEATURE or not frame.payload:
         return None
     return frame.payload[0]
+
+
+def parse_set_gesture_status(frame: Frame) -> int | None:
+    if frame.command != RESPONSE_SET_GESTURE or not frame.payload:
+        return None
+    return frame.payload[0]
+
 
 
 

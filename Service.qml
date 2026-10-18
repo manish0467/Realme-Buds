@@ -159,6 +159,24 @@ Item {
     return request("save_diagnostic_report", { path: String(path || "") })
   }
 
+  function gestureStatus() {
+    return request("gesture_status", {})
+  }
+
+  function setGesture(side, trigger, action) {
+    return request("set_gesture", {
+      side: String(side || ""),
+      trigger: String(trigger || ""),
+      action: String(action || "")
+    })
+  }
+
+  function setGestureAncModes(modes) {
+    return request("set_gesture_anc_modes", {
+      modes: modes || []
+    })
+  }
+
   onHelperPathChanged: startHelper()
 
   Component.onCompleted: startHelper()

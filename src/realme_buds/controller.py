@@ -6,7 +6,16 @@ from typing import cast
 
 from .lifecycle_trace import mark
 from .api import BudsBackend
-from .models import ControllerSnapshot, ControlResult, EqControlResult, EqStatusResult, EventBatch, StatusResult
+from .models import (
+    ControllerSnapshot,
+    ControlResult,
+    EqControlResult,
+    EqStatusResult,
+    EventBatch,
+    GestureStatusResult,
+    StatusResult,
+)
+from .gestures import GestureConfig, GestureStore, default_gesture_config
 from .profiles import profile_for_product
 from .protocol import (
     FEATURE_GAME_MODE,
@@ -39,6 +48,8 @@ class BudsController:
         self._reconnect_count = 0
         self._generation = 0
         self._eq_status: EqStatusResult | None = None
+        self._gesture_status: GestureStatusResult | None = None
+        self._gesture_store = GestureStore()
 
     def start(self) -> ControllerSnapshot:
         with self._lock:
@@ -51,6 +62,12 @@ class BudsController:
                 self.address = self._status.device.address
                 self._advertised_event_codes = self._session.advertised_event_codes
                 self._apply_batch(batch)
+                if self._session is not None and hasattr(self._session, "query_gestures"):
+                    try:
+                        g_cfg = self._session.query_gestures()
+                        self._update_gesture_status(g_cfg)
+                    except Exception:
+                        pass
                 self._running = True
                 mark("controller_usable")
             except UnsupportedProductError as error:
@@ -368,6 +385,59 @@ class BudsController:
             snapshot = self.snapshot()
             return success, snapshot
 
+    def _update_gesture_status(self, config: GestureConfig) -> None:
+        data = config.to_dict()
+        self._gesture_status = GestureStatusResult(
+            left=data["left"],
+            right=data["right"],
+            actions=tuple(data["actions"]),
+            long_press_anc_modes=tuple(data["long_press_anc_modes"]),
+            items=tuple(data["items"]),
+        )
+
+    def gesture_status(self) -> GestureStatusResult:
+        with self._lock:
+            self._require_running()
+            if self._gesture_status is None:
+                if self._session is not None and hasattr(self._session, "query_gestures"):
+                    config = cast(OpoSession, self._session).query_gestures()
+                    self._update_gesture_status(config)
+                else:
+                    self._update_gesture_status(self._gesture_store.load())
+            return cast(GestureStatusResult, self._gesture_status)
+
+    def set_gesture(self, side: str, trigger: str, action: str) -> bool:
+        with self._lock:
+            self._require_running()
+            if self._session is not None and hasattr(self._session, "set_gesture"):
+                success, batch = cast(OpoSession, self._session).set_gesture(side, trigger, action)
+                self._apply_batch(batch)
+            else:
+                config = self._gesture_store.load().with_action(side, trigger, action)
+                self._gesture_store.save(config)
+                self._update_gesture_status(config)
+                success = True
+            self._generation += 1
+            return success
+
+    def set_gesture_with_snapshot(self, side: str, trigger: str, action: str) -> tuple[bool, ControllerSnapshot]:
+        with self._lock:
+            success = self.set_gesture(side, trigger, action)
+            return success, self.snapshot()
+
+    def set_gesture_anc_modes(self, modes: tuple[str, ...]) -> tuple[bool, ControllerSnapshot]:
+        with self._lock:
+            self._require_running()
+            if self._session is not None and hasattr(self._session, "set_gesture_anc_modes"):
+                success, batch = cast(OpoSession, self._session).set_gesture_anc_modes(modes)
+                self._apply_batch(batch)
+            else:
+                config = self._gesture_store.load().with_anc_modes(modes)
+                self._gesture_store.save(config)
+                self._update_gesture_status(config)
+                success = True
+            self._generation += 1
+            return success, self.snapshot()
 
     def poll(self, wait: float = 0.2) -> ControllerSnapshot:
         with self._lock:
@@ -398,6 +468,7 @@ class BudsController:
             self._notification_event_codes = ()
             self._ignored_frames = 0
             self._eq_status = None
+            self._gesture_status = None
             self._generation += 1
             return self.snapshot()
 
@@ -413,6 +484,7 @@ class BudsController:
                 reconnect_count=self._reconnect_count,
                 generation=self._generation,
                 eq_status=self._eq_status,
+                gestures=self._gesture_status,
             )
 
     def _connect_session(self) -> None:
@@ -471,6 +543,19 @@ class BudsController:
                 # The next consumer read must fetch complete state, including
                 # changes made by HeyMelody on the shared device.
                 self._eq_status = None
+            elif event.kind == "gestures":
+                left = cast(dict[str, str], event.data.get("left", {}))
+                right = cast(dict[str, str], event.data.get("right", {}))
+                actions = tuple(cast(list[dict[str, object]], event.data.get("actions", [])))
+                anc_modes = tuple(cast(list[str], event.data.get("long_press_anc_modes", ["anc", "transparency"])))
+                items = tuple(cast(list[dict[str, object]], event.data.get("items", [])))
+                self._gesture_status = GestureStatusResult(
+                    left=left,
+                    right=right,
+                    actions=actions,
+                    long_press_anc_modes=anc_modes,
+                    items=items,
+                )
         if batch.events:
             self._generation += 1
 
