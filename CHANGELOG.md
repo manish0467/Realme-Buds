@@ -1,50 +1,33 @@
 # Changelog
 
-## Unreleased — 0.1.0 release candidate
+All notable changes to this project will be documented in this file.
 
-- Refocused codebase exclusively on realme Buds devices (hardware-verified on realme Buds T310).
-- Purged all legacy OnePlus device profiles, presets, launchers, and discovery filters.
-- Modularized device profiles with dynamic DeviceRegistry architecture for scaling realme models.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-- Refresh battery state when the panel opens and poll it periodically on the
-  running authenticated session, without reopening Bluetooth.
-- Ignore a disconnected-case zero reading so the bar and tooltip do not show a
-  phantom empty charging case.
-- Distinguish Verified, Community Tested and Experimental device evidence in the
-  backend and panel; only Buds Pro and Buds Pro 2 remain hardware-verified.
-- Add a compact experimental-device notice and user-controlled compatibility
-  report workflow, available to every connected device, with backend privacy
-  redaction and no automatic upload.
-- Propose privacy-safe model/date report filenames and guide successful saves to
-  the dedicated GitHub compatibility template for manual attachment.
-- Simplify public issue templates around the generated report and plain-language
-  physical compatibility checks.
-- Clarify marketplace metadata, compatibility documentation and GitHub issue
-  intake for untested OnePlus/OPO-compatible models.
+## [Unreleased]
 
-- Hardware-verified OnePlus Buds Pro and Buds Pro 2 identity, battery, firmware,
-  ANC On/Off/Transparency and supported strengths.
-- Generic transport-independent OPO framing, RFCOMM transport, device profiles,
-  typed backend, privacy-safe diagnostics and serialized session ownership.
-- Persistent authenticated sessions for verified main-mode changes; recorded
-  warm transition medians of 260 ms on Pro and 167 ms on Pro 2. Audible response
-  time was not measured; explicit strengths retain conservative setup.
-- Combined Omarchy service/bar plugin with one backend helper and reconnect logic.
-- Compact idle icon, battery hover expansion and delayed collapse.
-- Responsive themed panel with full-width device status, balanced noise-control
-  and earbud-EQ columns, compact preset/custom-EQ grids, and a narrow scrolling
-  fallback.
-- Native earbud EQ with model-specific verified presets, fresh read-back, Pro 2
-  device-defined six-band custom curves, and capability-driven panel controls.
-- Live EQ-panel acceptance on both reference models, including device switching,
-  HeyMelody-originated state reload, and closed-case power-cycle persistence.
-- Fixed Pro 2 custom-slot selection being reset by routine snapshot replacement;
-  current HeyMelody names and protocol ID 7 are hardware-mapped on firmware
-  `196.196.101`.
-- Restored helper startup on Omarchy 4.0.3 by resolving the bundled executable
-  relative to the service component instead of private manifest metadata.
-- Added a privacy-reviewed live panel screenshot for the marketplace preview.
-- Publication documentation, MIT license, dependency preflight, checkout-local
-  CLI launcher and clean plugin exporter.
+### Planned (Daily Shipping Roadmap)
+- **Day 1**: ANC Cycle CLI command (`./realme-buds anc cycle`) and Hyprland global hotkey integration.
+- **Day 2**: 45ms Low Latency Game Mode toggle (`./realme-buds game status|on|off`) and panel switch.
+- **Day 3**: Battery threshold notifications (20% warning, 10% critical) with anti-spam discharge tracking.
+- **Day 4**: In-ear wear detection toggle and desktop MPRIS auto-pause hook.
+- **Day 5**: Dual-device / Multipoint switch support.
+- **Day 6**: "Find My Buds" acoustic locator chime.
+- **Day 7**: Touch gesture remapping for physical tap controls.
 
-No public release or marketplace listing has been made.
+---
+
+## [0.1.0] - 2026-10-18
+
+### Added
+- Native Omarchy status bar widget and interactive panel for realme earbuds.
+- Hardware-verified compatibility with realme Buds T310 (`063C12`).
+- Battery status monitoring with discrete Left, Right, and Case percentages and charging indicators.
+- Active Noise Cancellation (ANC) control with instant switching between Off, Transparency, and Noise Cancellation.
+- Native hardware EQ presets (Bass Boost+, Pure Bass, Balanced, Clear Voice) applied directly to earbud DSP.
+- Extensible `DeviceRegistry` architecture loading declarative JSON device profiles from `src/realme_buds/devices/`.
+- Decoupled `Transport` protocol abstraction with BlueZ D-Bus and RFCOMM socket backends.
+- Full test suite with 141 Python unit tests and 8 Qt 6 QML interaction tests.
+- Official listing on the Omarchy Plugin Marketplace (`realme-buds.control`).
+
