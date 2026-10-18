@@ -205,6 +205,18 @@ class BudsFrontendBridge:
                     raise ValueError("set_mpris_hook parameter 'enabled' must be a boolean")
                 self.mpris_manager.enabled = enabled
                 result = {"enabled": enabled}
+            elif command == "multipoint_status":
+                self._require_parameters(command, params, set())
+                result = {"multipoint": self.controller.multipoint_status()}
+                self._on_snapshot(self.controller.snapshot())
+            elif command == "set_multipoint":
+                self._require_parameters(command, params, {"enabled"})
+                enabled = params["enabled"]
+                if not isinstance(enabled, bool):
+                    raise ValueError("set_multipoint parameter 'enabled' must be a boolean")
+                success, snapshot = self.controller.set_multipoint_with_snapshot(enabled)
+                result = {"multipoint": enabled, "success": success}
+                self._on_snapshot(snapshot)
             elif command == "save_diagnostic_report":
                 self._require_parameters(command, params, {"path"})
                 path = params["path"]

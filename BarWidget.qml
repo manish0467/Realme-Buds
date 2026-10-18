@@ -51,6 +51,10 @@ BarWidget {
     && snapshot.capabilities.indexOf("wear_detection") !== -1)
   readonly property bool wearDetectionEnabled: !!(snapshot && snapshot.feature_switches
     && snapshot.feature_switches.wear_detection === true)
+  readonly property bool multipointAvailable: !!(snapshot && snapshot.capabilities
+    && snapshot.capabilities.indexOf("multipoint") !== -1)
+  readonly property bool multipointEnabled: !!(snapshot && snapshot.feature_switches
+    && snapshot.feature_switches.multipoint === true)
   property bool notificationsEnabled: true
   property bool mprisHookEnabled: true
   readonly property bool useTwoColumnLayout: eqAvailable
@@ -210,6 +214,20 @@ BarWidget {
   function toggleMprisHook() {
     mprisHookEnabled = !mprisHookEnabled
     if (budsService) budsService.setMprisHook(mprisHookEnabled)
+  }
+
+  function toggleMultipoint() {
+    if (!budsService || connection !== "connected" || pendingRequestId >= 0) return
+    var nextState = !multipointEnabled
+    var requestId = budsService.setMultipoint(nextState)
+    if (requestId === null) {
+      outcome = "Could not start request"
+      return
+    }
+    pendingRequestId = requestId
+    pendingMode = nextState ? "dual_on" : "dual_off"
+    pendingKind = "multipoint"
+    outcome = ""
   }
 
   function selectEq(value) {
@@ -617,6 +635,29 @@ BarWidget {
                 Keys.onUpPressed: nextItemInFocusChain(false).forceActiveFocus(Qt.BacktabFocusReason)
                 Keys.onEscapePressed: root.close()
                 onClicked: root.toggleMprisHook()
+              }
+
+              Button {
+                id: multipointButton
+                width: featureColumn.width
+                height: Math.max(implicitHeight, Style.space(32))
+                text: "󰂌  Dual Connection"
+                selected: root.multipointEnabled
+                bordered: true
+                leftAlign: true
+                enabled: root.connection === "connected" && root.pendingRequestId < 0
+                opacity: enabled ? 1.0 : 0.5
+                foreground: root.bar.foreground
+                background: root.bar.background
+                accent: Color.accent
+                fontFamily: root.bar.fontFamily
+                focusable: true
+                visible: root.multipointAvailable
+                onActiveFocusChanged: if (activeFocus) panelScroll.reveal(this)
+                Keys.onDownPressed: nextItemInFocusChain().forceActiveFocus(Qt.TabFocusReason)
+                Keys.onUpPressed: nextItemInFocusChain(false).forceActiveFocus(Qt.BacktabFocusReason)
+                Keys.onEscapePressed: root.close()
+                onClicked: root.toggleMultipoint()
               }
             }
           }
@@ -1039,6 +1080,24 @@ BarWidget {
       })
     }
 
+    function toggleMultipoint(): string {
+      root.toggleMultipoint()
+      return "ok"
+    }
+
+    function setMultipoint(enabled: string): string {
+      var val = (enabled === "true" || enabled === "1" || enabled === "on")
+      if (root.budsService) root.budsService.setMultipoint(val)
+      return "ok"
+    }
+
+    function multipointStatus(): string {
+      return JSON.stringify({
+        multipoint: root.multipointEnabled,
+        multipoint_available: root.multipointAvailable
+      })
+    }
+
     function status(): string {
       return JSON.stringify({
         service: root.budsService !== null,
@@ -1064,6 +1123,8 @@ BarWidget {
         wear_detection: root.wearDetectionEnabled,
         wear_detection_available: root.wearDetectionAvailable,
         mpris_hook_enabled: root.mprisHookEnabled,
+        multipoint: root.multipointEnabled,
+        multipoint_available: root.multipointAvailable,
         pending: root.pendingRequestId >= 0,
         eq: root.eqStatus,
         compatibility: root.compatibilityKind,

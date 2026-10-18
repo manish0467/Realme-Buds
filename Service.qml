@@ -123,6 +123,14 @@ Item {
     return request("mpris_hook_status", {})
   }
 
+  function setMultipoint(enabled) {
+    return request("set_multipoint", { enabled: !!enabled })
+  }
+
+  function queryMultipoint() {
+    return request("multipoint_status", {})
+  }
+
   function eqStatus() {
     return request("eq_status", {})
   }

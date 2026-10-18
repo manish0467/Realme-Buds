@@ -15,6 +15,7 @@ This is an independent project, unaffiliated with realme or OPPO.
 - 45ms Low Latency Game Mode switch with global Hyprland hotkey.
 - Low battery desktop notifications (20% warning and 10% critical thresholds) with anti-spam coalescing.
 - In-ear capacitive wear detection switch and desktop MPRIS media auto-pause/resume hook.
+- Dual-device / Multipoint connection switch for simultaneous PC + smartphone pairing.
 - Icon-only idle widget; hover reveals known batteries (with charging indicators), with delayed collapse.
 - Responsive panel with full-width device status, balanced ANC/EQ columns when
   space permits, and a compact scrolling fallback on narrow displays.
@@ -163,6 +164,10 @@ Re-enable afterward to resume monitoring.
 ./realme-buds wear status          # Show wear detection & MPRIS hook status
 ./realme-buds wear on              # Enable in-ear capacitive wear detection (or: off, toggle)
 ./realme-buds wear mpris-on        # Enable MPRIS media auto-pause hook (or: mpris-off, mpris-status)
+
+# Dual-device / Multipoint connection
+./realme-buds multipoint status    # Show dual-connection state (or: ./realme-buds dual status)
+./realme-buds multipoint on        # Enable dual-device connection (or: off, toggle)
 
 # Control noise cancellation directly
 ./realme-buds anc status

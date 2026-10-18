@@ -7,8 +7,8 @@ import shutil
 import subprocess
 
 from .backend import (cycle_anc, device_summary, diagnostics_report, query_capabilities, query_eq,
-                      query_game_mode, query_status, query_wear_detection, set_anc, set_custom_eq, set_eq,
-                      set_game_mode, set_wear_detection)
+                      query_game_mode, query_multipoint, query_status, query_wear_detection, set_anc,
+                      set_custom_eq, set_eq, set_game_mode, set_multipoint, set_wear_detection)
 from .bluez import connected_devices
 
 
@@ -192,6 +192,52 @@ def _try_shell_wear(action: str) -> dict[str, object] | None:
     return None
 
 
+def _try_shell_multipoint(action: str) -> dict[str, object] | None:
+    if not shutil.which("omarchy-shell"):
+        return None
+    try:
+        if action == "status":
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "multipointStatus"],
+                capture_output=True,
+                text=True,
+                timeout=1.5,
+            )
+            if proc.returncode == 0:
+                return json.loads(proc.stdout)
+        elif action == "toggle":
+            proc_status = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "multipointStatus"],
+                capture_output=True,
+                text=True,
+                timeout=1.0,
+            )
+            if proc_status.returncode == 0:
+                data = json.loads(proc_status.stdout)
+                target = not bool(data.get("multipoint", False))
+                proc = subprocess.run(
+                    ["omarchy-shell", "realme-buds.control", "setMultipoint", "true" if target else "false"],
+                    capture_output=True,
+                    text=True,
+                    timeout=2.0,
+                )
+                if proc.returncode == 0:
+                    return {"multipoint": target, "verified": True}
+        elif action in ("on", "off"):
+            enabled = (action == "on")
+            proc = subprocess.run(
+                ["omarchy-shell", "realme-buds.control", "setMultipoint", "true" if enabled else "false"],
+                capture_output=True,
+                text=True,
+                timeout=2.0,
+            )
+            if proc.returncode == 0:
+                return {"multipoint": enabled, "verified": True}
+    except Exception:
+        pass
+    return None
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="realme-buds")
     parser.add_argument("--device", metavar="ADDRESS", help="select a connected device by Bluetooth address")
@@ -238,6 +284,18 @@ def main() -> None:
         nargs="?",
         default="status",
         help="query or configure in-ear detection and MPRIS hook (default: status)",
+    )
+    multipoint_parser = subparsers.add_parser(
+        "multipoint",
+        aliases=["dual"],
+        help="query or configure dual-device / multipoint connection",
+    )
+    multipoint_parser.add_argument(
+        "action",
+        choices=("status", "on", "off", "toggle"),
+        nargs="?",
+        default="status",
+        help="query or configure dual-device multipoint switch (default: status)",
     )
     args = parser.parse_args()
     try:
@@ -314,6 +372,20 @@ def main() -> None:
                 output = {"mpris_hook": args.action == "mpris-on"}
             else:
                 output = query_wear_detection(args.device)
+        elif args.command in ("multipoint", "dual"):
+            shell_res = _try_shell_multipoint(args.action) if args.device is None else None
+            if shell_res is not None:
+                output = shell_res
+            elif args.action == "status":
+                output = query_multipoint(args.device)
+            elif args.action == "toggle":
+                curr = query_multipoint(args.device)
+                next_val = not bool(curr.get("multipoint", False))
+                output = set_multipoint(next_val, args.device)
+            elif args.action in ("on", "off"):
+                output = set_multipoint(args.action == "on", args.device)
+            else:
+                output = query_multipoint(args.device)
         elif args.command == "anc":
             if args.mode == "status":
                 status = query_status(args.device)

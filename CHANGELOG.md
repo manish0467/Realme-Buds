@@ -43,8 +43,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `󰋋  In-Ear Detection` (enables/disables capacitive wear sensing on firmware).
   - `󰐎  Auto-Pause Media` (enables/disables desktop MPRIS pause/resume hook).
 
+### Added (Day 5 - Completed ✅)
+- Dual-Device / Multipoint connection support for realme Buds T310 (`063C12.json` with Feature `0x11` / `FEATURE_MULTIPOINT` via `0x0403` framing).
+- Allows simultaneous connection to PC and smartphone with automatic audio handoff.
+- CLI commands: `./realme-buds multipoint status`, `./realme-buds multipoint on`, `./realme-buds multipoint off`, `./realme-buds multipoint toggle` (with `./realme-buds dual` shorthand alias).
+- Quickshell IPC endpoints `setMultipoint`, `toggleMultipoint`, and `multipointStatus`.
+- Interactive UI toggle button in `BarWidget.qml` panel:
+  - `󰂌  Dual Connection` (toggles dual-device multipoint pairing on firmware).
+
 ### Planned (Daily Shipping Roadmap)
-- **Day 5**: Dual-device / Multipoint switch support.
 - **Day 6**: "Find My Buds" acoustic locator chime.
 - **Day 7**: Touch gesture remapping for physical tap controls.
 

@@ -13,7 +13,8 @@
     "transparency",
     "eq",
     "game_mode",
-    "wear_detection"
+    "wear_detection",
+    "multipoint"
   ],
   "anc": {
     "write_indices": {

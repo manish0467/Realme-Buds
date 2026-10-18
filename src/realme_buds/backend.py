@@ -25,6 +25,7 @@ from .protocol import (
     AncState,
     FEATURE_GAME_MODE,
     FEATURE_LOW_LATENCY,
+    FEATURE_MULTIPOINT,
     FEATURE_WEAR_DETECTION,
     FEATURE_SWITCH_NAMES,
     Frame,
@@ -300,6 +301,22 @@ def set_wear_detection(enabled: bool, address: str | None = None) -> dict[str, o
     try:
         s, _batch = session.set_feature_switch(FEATURE_WEAR_DETECTION, enabled)
         return {"wear_detection": enabled, "success": s}
+    finally:
+        session.__exit__(None, None, None)
+
+
+def query_multipoint(address: str | None = None) -> dict[str, object]:
+    switches = query_feature_switches(address)
+    enabled = switches.get("multipoint", False)
+    return {"multipoint": enabled, "switches": switches}
+
+
+def set_multipoint(enabled: bool, address: str | None = None) -> dict[str, object]:
+    device = select_device(address)
+    session, _status, _events = OpoSession.bootstrap(device)
+    try:
+        s, _batch = session.set_feature_switch(FEATURE_MULTIPOINT, enabled)
+        return {"multipoint": enabled, "success": s}
     finally:
         session.__exit__(None, None, None)
 
