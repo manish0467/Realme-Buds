@@ -173,7 +173,10 @@ class FrameStream:
                 break
             raw = bytes(self._buffer[:frame_length])
             del self._buffer[:frame_length]
-            frames.append(decode_frame(raw))
+            try:
+                frames.append(decode_frame(raw))
+            except ValueError:
+                continue
         return frames
 
 
