@@ -218,12 +218,37 @@ class BridgeTests(unittest.TestCase):
 
     def test_malformed_custom_eq_never_reaches_controller(self):
         controller = FakeController()
-        response = BudsFrontendBridge(lambda _event: None, controller=controller).execute(
+        bridge = BudsFrontendBridge(lambda _event: None, controller=controller)
+        response = bridge.execute(
             "set_custom_eq", {"entry_id": 4, "gains_db": [True]}
         )
         self.assertFalse(response["ok"])
         self.assertEqual(response["error"]["code"], "invalid_parameters")
         self.assertEqual(controller.custom_targets, [])
+
+        # Non-string name is rejected
+        response_invalid_name = bridge.execute(
+            "set_custom_eq", {"entry_id": 4, "gains_db": [3], "name": 123}
+        )
+        self.assertFalse(response_invalid_name["ok"])
+        self.assertEqual(response_invalid_name["error"]["code"], "invalid_parameters")
+
+        # Extraneous unexpected parameter is rejected
+        response_extra = bridge.execute(
+            "set_custom_eq", {"entry_id": 4, "gains_db": [3], "unexpected": "extra"}
+        )
+        self.assertFalse(response_extra["ok"])
+        self.assertEqual(response_extra["error"]["code"], "invalid_parameters")
+
+    def test_set_custom_eq_accepts_optional_name(self):
+        controller = FakeController()
+        bridge = BudsFrontendBridge(lambda _event: None, controller=controller)
+        response = bridge.execute(
+            "set_custom_eq", {"entry_id": 100, "gains_db": [2, 1, 0, -1, 0, 1], "name": "Custom Profile"}
+        )
+        self.assertTrue(response["ok"])
+        self.assertTrue(response["result"]["verified"])
+        self.assertEqual(controller.custom_targets, [(100, (2, 1, 0, -1, 0, 1))])
 
     def test_verified_response_does_not_reacquire_snapshot_during_recovery(self):
         controller = FakeController()

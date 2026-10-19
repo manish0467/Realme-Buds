@@ -57,7 +57,7 @@ Bluetooth addresses, raw OPO frames, pairing data, and raw notification payloads
   custom capabilities on the existing authenticated session.
 - `set_eq` with exactly `{"preset": "..."}`: selects only a verified factory key
   or device-declared custom ID and refreshes the emitted state after read-back.
-- `set_custom_eq` with exactly `{"entry_id": number, "gains_db": [integers...]}`:
+- `set_custom_eq` with `{"entry_id": number, "gains_db": [integers...], "name"?: string}`:
   delegates strict band-count/range validation to the device capability layer,
   sends once, and emits only freshly verified state.
 - `save_diagnostic_report` with exactly `{"path": local-file-url}`: builds a

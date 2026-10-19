@@ -168,7 +168,9 @@ class BudsFrontendBridge:
                 result = self._serialize_eq_control(control)
                 self._on_snapshot(self.controller.snapshot())
             elif command == "set_custom_eq":
-                self._require_parameters(command, params, {"entry_id", "gains_db"})
+                self._require_parameters(
+                    command, params, {"entry_id", "gains_db"}, optional={"name"}
+                )
                 entry_id, gains = params["entry_id"], params["gains_db"]
                 if not isinstance(entry_id, int) or isinstance(entry_id, bool):
                     raise ValueError("set_custom_eq parameter 'entry_id' must be an integer")
@@ -177,6 +179,8 @@ class BudsFrontendBridge:
                 ):
                     raise ValueError("set_custom_eq parameter 'gains_db' must be an integer array")
                 name = params.get("name")
+                if name is not None and not isinstance(name, str):
+                    raise ValueError("set_custom_eq parameter 'name' must be a string")
                 name_str = str(name).strip() if name else None
                 preset = self.custom_store.update_preset(entry_id, name=name_str, gains=gains)
                 if preset is not None:
@@ -402,9 +406,11 @@ class BudsFrontendBridge:
         command: str,
         parameters: Mapping[str, object],
         expected: set[str],
+        optional: set[str] | None = None,
     ) -> None:
         supplied = set(parameters)
-        if supplied != expected:
+        allowed = expected | (optional or set())
+        if not (expected <= supplied <= allowed):
             raise ValueError(
                 f"{command} requires parameters {sorted(expected)}; received {sorted(supplied)}"
             )
