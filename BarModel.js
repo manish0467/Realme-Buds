@@ -124,7 +124,7 @@ function reportActionLabel(snapshot) {
     ? "Report compatibility" : "Report a problem"
 }
 
-var COMPATIBILITY_ISSUE_URL = "https://github.com/Alenbosh/Realme-Buds/issues/new?template=compatibility.md"
+var COMPATIBILITY_ISSUE_URL = "https://github.com/manish0467/Realme-Buds/issues/new?template=compatibility.md"
 
 function safeReportModel(snapshot) {
   var status = snapshot && snapshot.status

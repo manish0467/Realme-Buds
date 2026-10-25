@@ -144,7 +144,7 @@ if (model.reportFilename({status:{model:"realme Buds Air 6"}}, date) !== "realme
 if (model.reportFilename({status:{model:"Alice's realme Buds / AA:BB:CC:DD:EE:FF"}}, date) !== "realme-buds-report-2026-09-16.txt") process.exit(22);
 if (model.reportFilename({status:{model:null}}, date) !== "realme-buds-report-2026-09-16.txt") process.exit(23);
 if (model.textReportUrl("file:///tmp/report.json") !== "file:///tmp/report.txt") process.exit(24);
-const issue = "https://github.com/Alenbosh/Realme-Buds/issues/new?template=compatibility.md&title=%5BCompatibility%5D%20realme%20Buds%20T310";
+const issue = "https://github.com/manish0467/Realme-Buds/issues/new?template=compatibility.md&title=%5BCompatibility%5D%20realme%20Buds%20T310";
 if (model.compatibilityIssueUrl(snapshot) !== issue) process.exit(25);
 if (model.compatibilityIssueUrl({status:{model:null}}) !== model.COMPATIBILITY_ISSUE_URL) process.exit(26);
 if (model.compatibilityIssueUrl(snapshot).includes("report=") || model.compatibilityIssueUrl(snapshot).includes("path=")) process.exit(27);

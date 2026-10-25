@@ -17,7 +17,7 @@ systemctl is-active bluetooth
 ## Install
 
 ```bash
-omarchy plugin add https://github.com/Alenbosh/Realme-Buds.git realme-buds.control
+omarchy plugin add https://github.com/manish0467/Realme-Buds.git realme-buds.control
 python3 "$HOME/.config/omarchy/plugins/realme-buds.control/scripts/check_dependencies.py"
 omarchy plugin enable realme-buds.control --section right
 ```

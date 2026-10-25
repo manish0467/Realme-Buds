@@ -36,4 +36,4 @@ Use system Python with `python-dbus`. Virtual environments may not expose the sy
 
 Generate a diagnostics/compatibility report and open an issue with the template:
 
-`https://github.com/Alenbosh/Realme-Buds/issues/new?template=compatibility.md`
+`https://github.com/manish0467/Realme-Buds/issues/new?template=compatibility.md`

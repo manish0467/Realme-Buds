@@ -17,7 +17,7 @@ pages.
 - Automatic selection of one connected compatible realme device.
 - Connection status, left/right battery, case battery when returned, and firmware.
 - Independently verified ANC On, Off, and Transparency.
-- Model-correct native earbud EQ presets on realme Buds T310 (Balanced, Clear Bass, Clear Vocals, Bright).
+- Model-correct native earbud EQ presets on realme Buds T310 (Balanced, Clear Bass, Clear Vocals, Bright) and Custom 6-Band Equalizer profile management with smart hardware-preset matching fallback.
 - 45ms Low Latency Game Mode switch with global Hyprland hotkey.
 - Low battery desktop notifications (20% warning and 10% critical thresholds) with anti-spam coalescing.
 - In-ear capacitive wear detection switch and desktop MPRIS media auto-pause/resume hook.
@@ -34,8 +34,8 @@ pages.
 | realme Buds T310 | `063C12` | Verified on hardware | 1.1.0.47 | Off, Transparency, ANC On | Balanced, Clear Bass, Clear Vocals, Bright |
 | Other realme earbuds | Unknown | Experimental if recognised | Unknown | Not exposed | Not exposed |
 
-See [compatibility and limitations](docs/devices/compatibility.md). Gestures,
-spatial audio and other Realme Link features are not implemented controls.
+See [compatibility and limitations](docs/devices/compatibility.md). Spatial audio,
+camera shutter, and cloud-synced features are not implemented controls.
 
 ## Compatibility and reports
 
@@ -50,7 +50,7 @@ panel. Verified and Community Tested devices show **Report a problem**;
 Experimental devices show **Report compatibility** beneath their compatibility
 notice. All use the same workflow: the panel explains the report contents, proposes
 a safe `.txt` filename, lets you choose where to save it, and never uploads it.
-After saving, open the [compatibility report template](https://github.com/Alenbosh/Realme-Buds/issues/new?template=compatibility.md)
+After saving, open the [compatibility report template](https://github.com/manish0467/Realme-Buds/issues/new?template=compatibility.md)
 and attach the reviewed report yourself. Reports covering detection, battery, ANC,
 Transparency and EQ are welcome even when everything works.
 
@@ -82,7 +82,7 @@ checks availability only and does not connect to the earbuds.
 Install from GitHub using Omarchy's supported installer:
 
 ```bash
-omarchy plugin add https://github.com/Alenbosh/Realme-Buds.git realme-buds.control
+omarchy plugin add https://github.com/manish0467/Realme-Buds.git realme-buds.control
 python3 "$HOME/.config/omarchy/plugins/realme-buds.control/scripts/check_dependencies.py"
 omarchy plugin enable realme-buds.control --section right
 ```
@@ -196,9 +196,14 @@ own RFCOMM session (`diagnostics`, `capabilities`, `eq`, or any command with
 # Control noise cancellation directly
 ./realme-buds anc status
 ./realme-buds anc on               # or: off, transparency
-./realme-buds eq status
-./realme-buds eq list
-./realme-buds eq set balanced
+
+# Equalizer and Custom EQ profiles
+./realme-buds eq status            # Active preset and custom profiles
+./realme-buds eq list              # List factory presets and custom profiles
+./realme-buds eq set balanced      # Activate factory preset (or custom profile)
+./realme-buds eq add "Deep Bass"   # Create a new custom 6-band EQ profile
+./realme-buds eq custom 100 6 4 1 0 0 0  # Adjust gains (-12dB to +12dB)
+./realme-buds eq delete 100        # Delete custom EQ profile
 ./realme-buds diagnostics --report
 ```
 

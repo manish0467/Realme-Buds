@@ -3,7 +3,7 @@
   "id": "realme-buds.control",
   "name": "realme Buds Control",
   "version": "0.2.1",
-  "author": "Alenbosh",
+  "author": "manish0467",
   "description": "Native realme earbuds controls for Omarchy. Hardware verified on realme Buds T310.",
   "kinds": ["service", "bar-widget"],
   "keepLoaded": true,
@@ -19,6 +19,6 @@
     "defaultSection": "right"
   },
   "license": "MIT",
-  "repository": "https://github.com/Alenbosh/Realme-Buds",
-  "homepage": "https://github.com/Alenbosh/Realme-Buds"
+  "repository": "https://github.com/manish0467/Realme-Buds",
+  "homepage": "https://github.com/manish0467/Realme-Buds"
 }

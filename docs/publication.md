@@ -16,7 +16,7 @@ install hooks. A read-only dependency preflight and a clean exporter are include
 
 The version remains an unreleased release candidate; preparing it does not create
 a tag, GitHub release, or marketplace listing. The repository is
-`https://github.com/Alenbosh/Realme-Buds.git`. Its initial
+`https://github.com/manish0467/Realme-Buds.git`. Its initial
 commit is preserved in history. The current LICENSE uses
 the MIT notice, Copyright (c) 2026 Alen(Manish) and contributors.
 
@@ -25,7 +25,7 @@ the MIT notice, Copyright (c) 2026 Alen(Manish) and contributors.
 
 | Field | Proposed value |
 |---|---|
-| Repository URL | https://github.com/Alenbosh/Realme-Buds |
+| Repository URL | https://github.com/manish0467/Realme-Buds |
 | Category | Hardware |
 | Tags | `bar`, `media`, `quickshell` |
 | Plugin name | realme Buds Control |
@@ -70,7 +70,7 @@ being committed for marketplace use.
 For a public Git URL, the current install flow is:
 
 ```bash
-omarchy plugin add https://github.com/Alenbosh/Realme-Buds.git realme-buds.control
+omarchy plugin add https://github.com/manish0467/Realme-Buds.git realme-buds.control
 python3 "$HOME/.config/omarchy/plugins/realme-buds.control/scripts/check_dependencies.py"
 omarchy plugin enable realme-buds.control --section right
 ```

@@ -13,8 +13,8 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.urls]
-Repository = "https://github.com/Alenbosh/Realme-Buds.git"
-Issues = "https://github.com/Alenbosh/Realme-Buds/issues"
+Repository = "https://github.com/manish0467/Realme-Buds.git"
+Issues = "https://github.com/manish0467/Realme-Buds/issues"
 
 [project.scripts]
 realme-buds = "realme_buds.cli:main"

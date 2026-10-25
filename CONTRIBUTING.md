@@ -14,8 +14,8 @@ physically heard or observed. Do not include Bluetooth addresses, pairing data,
 unrelated devices or raw notification payloads. The latter can contain information
 about peer devices.
 
-Use the [compatibility report template](https://github.com/Alenbosh/Realme-Buds/issues/new?template=compatibility.md)
-for device reports, or the [issue chooser](https://github.com/Alenbosh/Realme-Buds/issues/new/choose)
+Use the [compatibility report template](https://github.com/manish0467/Realme-Buds/issues/new?template=compatibility.md)
+for device reports, or the [issue chooser](https://github.com/manish0467/Realme-Buds/issues/new/choose)
 for other bugs.
 
 ## Adding a device or feature
