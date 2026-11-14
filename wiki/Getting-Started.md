@@ -17,9 +17,9 @@ systemctl is-active bluetooth
 ## Install
 
 ```bash
-omarchy plugin add https://github.com/manish0467/Realme-Buds.git realme-buds.control
-python3 "$HOME/.config/omarchy/plugins/realme-buds.control/scripts/check_dependencies.py"
-omarchy plugin enable realme-buds.control --section right
+omarchy plugin add https://github.com/manish0467/Realme-Buds.git io.github.manish0467.realme-buds
+python3 "$HOME/.config/omarchy/plugins/io.github.manish0467.realme-buds/scripts/check_dependencies.py"
+omarchy plugin enable io.github.manish0467.realme-buds --section right
 ```
 
 If prompted to enable immediately, run the dependency check first.
@@ -35,14 +35,14 @@ If prompted to enable immediately, run the dependency check first.
 Disable the plugin before running CLI commands that query or control earbuds, then re-enable afterward:
 
 ```bash
-omarchy plugin disable realme-buds.control
+omarchy plugin disable io.github.manish0467.realme-buds
 # run CLI commands
-omarchy plugin enable realme-buds.control --section right
+omarchy plugin enable io.github.manish0467.realme-buds --section right
 ```
 
 ## Remove
 
 ```bash
-omarchy plugin disable realme-buds.control
-omarchy plugin remove realme-buds.control
+omarchy plugin disable io.github.manish0467.realme-buds
+omarchy plugin remove io.github.manish0467.realme-buds
 ```

@@ -10,7 +10,7 @@ import "BarModel.js" as BarModel
 
 BarWidget {
   id: root
-  moduleName: "realme-buds.control"
+  moduleName: "io.github.manish0467.realme-buds"
 
   readonly property var budsService: bar && bar.shell
     ? bar.shell.serviceFor(moduleName) : null
@@ -1589,7 +1589,7 @@ BarWidget {
   }
 
   IpcHandler {
-    target: "realme-buds.control"
+    target: "io.github.manish0467.realme-buds"
 
     function cycleAnc(): string {
       root.cycleAnc()

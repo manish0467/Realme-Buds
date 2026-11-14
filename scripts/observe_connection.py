@@ -60,7 +60,7 @@ def main():
         seen = set()
         while not stopped.is_set():
             try:
-                result = subprocess.run(['omarchy-shell', 'realme-buds.control', 'status'],
+                result = subprocess.run(['omarchy-shell', 'io.github.manish0467.realme-buds', 'status'],
                     capture_output=True, text=True, timeout=2)
                 data = json.loads(result.stdout)
                 for event in data.get('lifecycle', []):

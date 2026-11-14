@@ -1,5 +1,6 @@
 import io
 import struct
+import time
 import unittest
 import wave
 from unittest.mock import MagicMock, patch
@@ -81,6 +82,12 @@ class AcousticLocatorTests(unittest.TestCase):
         locator = AcousticLocator(default_address="AA:BB:CC:DD:EE:FF")
         state = locator.start(target="left", duration=5.0)
         self.assertEqual(state["target"], "left")
+
+        # Wait briefly for thread to spawn subprocess
+        for _ in range(50):
+            if locator._proc is not None:
+                break
+            time.sleep(0.01)
 
         # Stop
         stop_state = locator.stop()

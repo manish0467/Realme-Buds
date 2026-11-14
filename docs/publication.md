@@ -29,7 +29,7 @@ the MIT notice, Copyright (c) 2026 Alen(Manish) and contributors.
 | Category | Hardware |
 | Tags | `bar`, `media`, `quickshell` |
 | Plugin name | realme Buds Control |
-| ID | `realme-buds.control` |
+| ID | `io.github.manish0467.realme-buds` |
 | Version | `0.1.0` (release candidate; not tagged) |
 | License | MIT |
 
@@ -70,15 +70,15 @@ being committed for marketplace use.
 For a public Git URL, the current install flow is:
 
 ```bash
-omarchy plugin add https://github.com/manish0467/Realme-Buds.git realme-buds.control
-python3 "$HOME/.config/omarchy/plugins/realme-buds.control/scripts/check_dependencies.py"
-omarchy plugin enable realme-buds.control --section right
+omarchy plugin add https://github.com/manish0467/Realme-Buds.git io.github.manish0467.realme-buds
+python3 "$HOME/.config/omarchy/plugins/io.github.manish0467.realme-buds/scripts/check_dependencies.py"
+omarchy plugin enable io.github.manish0467.realme-buds --section right
 ```
 
 Decline immediate enable if offered until the preflight passes. Omarchy performs the clone,
 validation and enable flow; it does not install Python dependencies. Users should
 run the documented preflight before enabling. Updates for Git-managed installs
-use `omarchy plugin update realme-buds.control`; copied exports must be replaced
+use `omarchy plugin update io.github.manish0467.realme-buds`; copied exports must be replaced
 only after preserving any local modifications.
 
 ## Local verification scope

@@ -45,7 +45,7 @@ class PluginScaffoldTests(unittest.TestCase):
     def test_manifest_declares_combined_service_widget(self):
         manifest = json.loads((ROOT / "manifest.json").read_text())
         self.assertEqual(manifest["schemaVersion"], 1)
-        self.assertEqual(manifest["id"], "realme-buds.control")
+        self.assertEqual(manifest["id"], "io.github.manish0467.realme-buds")
         self.assertEqual(set(manifest["kinds"]), {"service", "bar-widget"})
         self.assertEqual(manifest["entryPoints"]["service"], "Service.qml")
         self.assertEqual(manifest["entryPoints"]["barWidget"], "BarWidget.qml")
@@ -91,7 +91,7 @@ class PluginScaffoldTests(unittest.TestCase):
         self.assertIn("root.openReportIssue()", widget)
         self.assertIn("Number(response.request_id) !== pendingRequestId", widget)
         self.assertEqual(widget.count("IpcHandler {"), 1)
-        self.assertIn('target: "realme-buds.control"', widget)
+        self.assertIn('target: "io.github.manish0467.realme-buds"', widget)
         self.assertIn("function status(): string", widget)
         self.assertIn("function cycleAnc(): string", widget)
         self.assertIn("visible: true", widget)

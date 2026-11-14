@@ -82,9 +82,9 @@ checks availability only and does not connect to the earbuds.
 Install from GitHub using Omarchy's supported installer:
 
 ```bash
-omarchy plugin add https://github.com/manish0467/Realme-Buds.git realme-buds.control
-python3 "$HOME/.config/omarchy/plugins/realme-buds.control/scripts/check_dependencies.py"
-omarchy plugin enable realme-buds.control --section right
+omarchy plugin add https://github.com/manish0467/Realme-Buds.git io.github.manish0467.realme-buds
+python3 "$HOME/.config/omarchy/plugins/io.github.manish0467.realme-buds/scripts/check_dependencies.py"
+omarchy plugin enable io.github.manish0467.realme-buds --section right
 ```
 
 If the installer offers to enable immediately, decline until the dependency check
@@ -94,10 +94,10 @@ For an existing local checkout, copy it into the user plugin directory without
 Git internals or caches. The destination must not already exist:
 
 ```bash
-python3 scripts/export_plugin.py "$HOME/.config/omarchy/plugins/realme-buds.control"
-omarchy plugin validate "$HOME/.config/omarchy/plugins/realme-buds.control"
+python3 scripts/export_plugin.py "$HOME/.config/omarchy/plugins/io.github.manish0467.realme-buds"
+omarchy plugin validate "$HOME/.config/omarchy/plugins/io.github.manish0467.realme-buds"
 omarchy-shell shell rescanPlugins
-omarchy plugin enable realme-buds.control --section right
+omarchy plugin enable io.github.manish0467.realme-buds --section right
 ```
 
 The exporter writes only to the new destination. Enabling uses Omarchy's supported
@@ -110,13 +110,13 @@ Installation has no dependency hook, so run the dependency check before enabling
 To stop the helper and hide the widget:
 
 ```bash
-omarchy plugin disable realme-buds.control
+omarchy plugin disable io.github.manish0467.realme-buds
 ```
 
 To remove it:
 
 ```bash
-omarchy plugin remove realme-buds.control
+omarchy plugin remove io.github.manish0467.realme-buds
 ```
 
 Omarchy asks for confirmation; it backs up a copied directory or removes a
@@ -215,8 +215,8 @@ Control noise modes and gaming latency on the fly without opening the panel:
 
 Configured in `~/.config/hypr/bindings.lua`:
 ```lua
-o.bind("SUPER + ALT + A", "Cycle Earbuds ANC", "omarchy-shell realme-buds.control cycleAnc")
-o.bind("SUPER + ALT + G", "Toggle Earbuds Game Mode", "omarchy-shell realme-buds.control toggleGameMode")
+o.bind("SUPER + ALT + A", "Cycle Earbuds ANC", "omarchy-shell io.github.manish0467.realme-buds cycleAnc")
+o.bind("SUPER + ALT + G", "Toggle Earbuds Game Mode", "omarchy-shell io.github.manish0467.realme-buds toggleGameMode")
 ```
 
 

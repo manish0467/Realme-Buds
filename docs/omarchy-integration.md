@@ -69,10 +69,10 @@ Automated lifecycle tests use fake bridges and no Bluetooth hardware. They cover
 
 The repository root is now directly installable as an Omarchy plugin checkout:
 
-- `manifest.json` declares `realme-buds.control` as a combined `service` and `bar-widget`, defaulting to the right section.
+- `manifest.json` declares `io.github.manish0467.realme-buds` as a combined `service` and `bar-widget`, defaulting to the right section.
 - `realme-buds-bridge` is an executable checkout-local launcher that imports the bundled `src/` tree. This avoids relying on an install hook or prior Python-package installation.
 - `Service.qml` starts exactly one bidirectional helper after the shell injects the manifest source directory. It parses schema-v1 lines through `BridgeModel.js`, exposes primitive connection/snapshot/response state, sends refresh and ANC requests over stdin, suppresses raw stderr, and stops the helper when unloaded.
-- `BarWidget.qml` resolves the shared service through `bar.shell.serviceFor("realme-buds.control")` but remains invisible and zero-width. It exists only to prove the combined plugin shape before visual work begins.
+- `BarWidget.qml` resolves the shared service through `bar.shell.serviceFor("io.github.manish0467.realme-buds")` but remains invisible and zero-width. It exists only to prove the combined plugin shape before visual work begins.
 
 `omarchy plugin validate .` passes. The Python suite covers the manifest, executable launcher, one-helper constraint, shared-service lookup, hidden placeholder, and JavaScript parser/reducer. Direct launcher EOF testing emits valid lifecycle NDJSON and exits cleanly.
 

@@ -14,23 +14,34 @@ from .bluez import connected_devices
 from .gestures import ACTION_DEFINITIONS
 
 
+PRIMARY_PLUGIN_ID = "io.github.manish0467.realme-buds"
+LEGACY_PLUGIN_ID = "realme-buds.control"
+
+
+def _run_shell_cmd(method: str, *args: str, timeout: float = 2.0) -> subprocess.CompletedProcess[str]:
+    proc = subprocess.run(
+        ["omarchy-shell", PRIMARY_PLUGIN_ID, method, *args],
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+    if proc.returncode == 0:
+        return proc
+    return subprocess.run(
+        ["omarchy-shell", LEGACY_PLUGIN_ID, method, *args],
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+
+
 def _try_shell_cycle_anc() -> dict[str, object] | None:
     if not shutil.which("omarchy-shell"):
         return None
     try:
-        proc = subprocess.run(
-            ["omarchy-shell", "realme-buds.control", "cycleAnc"],
-            capture_output=True,
-            text=True,
-            timeout=2.0,
-        )
+        proc = _run_shell_cmd("cycleAnc", timeout=2.0)
         if proc.returncode == 0:
-            proc_status = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "status"],
-                capture_output=True,
-                text=True,
-                timeout=1.0,
-            )
+            proc_status = _run_shell_cmd("status", timeout=1.0)
             if proc_status.returncode == 0:
                 data = json.loads(proc_status.stdout)
                 return {
@@ -47,12 +58,7 @@ def _try_shell_game_mode(action: str) -> dict[str, object] | None:
         return None
     try:
         if action == "status":
-            proc_status = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "status"],
-                capture_output=True,
-                text=True,
-                timeout=1.5,
-            )
+            proc_status = _run_shell_cmd("status", timeout=1.5)
             if proc_status.returncode == 0:
                 data = json.loads(proc_status.stdout)
                 return {
@@ -60,31 +66,16 @@ def _try_shell_game_mode(action: str) -> dict[str, object] | None:
                     "verified": True,
                 }
         elif action == "toggle":
-            proc_status = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "status"],
-                capture_output=True,
-                text=True,
-                timeout=1.0,
-            )
+            proc_status = _run_shell_cmd("status", timeout=1.0)
             if proc_status.returncode == 0:
                 data = json.loads(proc_status.stdout)
                 target = not bool(data.get("game_mode", False))
-                proc = subprocess.run(
-                    ["omarchy-shell", "realme-buds.control", "setGameMode", "true" if target else "false"],
-                    capture_output=True,
-                    text=True,
-                    timeout=2.0,
-                )
+                proc = _run_shell_cmd("setGameMode", "true" if target else "false", timeout=2.0)
                 if proc.returncode == 0:
                     return {"game_mode": target, "verified": True}
         else:
             enabled = (action == "on")
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "setGameMode", "true" if enabled else "false"],
-                capture_output=True,
-                text=True,
-                timeout=2.0,
-            )
+            proc = _run_shell_cmd("setGameMode", "true" if enabled else "false", timeout=2.0)
             if proc.returncode == 0:
                 return {"game_mode": enabled, "verified": True}
     except Exception:
@@ -97,31 +88,16 @@ def _try_shell_notify(action: str) -> dict[str, object] | None:
         return None
     try:
         if action == "status":
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "notifyStatus"],
-                capture_output=True,
-                text=True,
-                timeout=1.5,
-            )
+            proc = _run_shell_cmd("notifyStatus", timeout=1.5)
             if proc.returncode == 0:
                 return json.loads(proc.stdout)
         elif action == "test":
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "testNotification"],
-                capture_output=True,
-                text=True,
-                timeout=2.0,
-            )
+            proc = _run_shell_cmd("testNotification", timeout=2.0)
             if proc.returncode == 0:
                 return {"sent": True, "verified": True}
         else:
             enabled = (action == "on")
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "setNotifications", "true" if enabled else "false"],
-                capture_output=True,
-                text=True,
-                timeout=2.0,
-            )
+            proc = _run_shell_cmd("setNotifications", "true" if enabled else "false", timeout=2.0)
             if proc.returncode == 0:
                 return {"enabled": enabled, "verified": True}
     except Exception:
@@ -134,59 +110,29 @@ def _try_shell_wear(action: str) -> dict[str, object] | None:
         return None
     try:
         if action == "status":
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "wearStatus"],
-                capture_output=True,
-                text=True,
-                timeout=1.5,
-            )
+            proc = _run_shell_cmd("wearStatus", timeout=1.5)
             if proc.returncode == 0:
                 return json.loads(proc.stdout)
         elif action == "toggle":
-            proc_status = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "wearStatus"],
-                capture_output=True,
-                text=True,
-                timeout=1.0,
-            )
+            proc_status = _run_shell_cmd("wearStatus", timeout=1.0)
             if proc_status.returncode == 0:
                 data = json.loads(proc_status.stdout)
                 target = not bool(data.get("wear_detection", False))
-                proc = subprocess.run(
-                    ["omarchy-shell", "realme-buds.control", "setWearDetection", "true" if target else "false"],
-                    capture_output=True,
-                    text=True,
-                    timeout=2.0,
-                )
+                proc = _run_shell_cmd("setWearDetection", "true" if target else "false", timeout=2.0)
                 if proc.returncode == 0:
                     return {"wear_detection": target, "verified": True}
         elif action in ("on", "off"):
             enabled = (action == "on")
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "setWearDetection", "true" if enabled else "false"],
-                capture_output=True,
-                text=True,
-                timeout=2.0,
-            )
+            proc = _run_shell_cmd("setWearDetection", "true" if enabled else "false", timeout=2.0)
             if proc.returncode == 0:
                 return {"wear_detection": enabled, "verified": True}
         elif action == "mpris-status":
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "mprisHookStatus"],
-                capture_output=True,
-                text=True,
-                timeout=1.5,
-            )
+            proc = _run_shell_cmd("mprisHookStatus", timeout=1.5)
             if proc.returncode == 0:
                 return json.loads(proc.stdout)
         elif action in ("mpris-on", "mpris-off"):
             enabled = (action == "mpris-on")
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "setMprisHook", "true" if enabled else "false"],
-                capture_output=True,
-                text=True,
-                timeout=2.0,
-            )
+            proc = _run_shell_cmd("setMprisHook", "true" if enabled else "false", timeout=2.0)
             if proc.returncode == 0:
                 return {"mpris_hook": enabled, "verified": True}
     except Exception:
@@ -199,40 +145,20 @@ def _try_shell_multipoint(action: str) -> dict[str, object] | None:
         return None
     try:
         if action == "status":
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "multipointStatus"],
-                capture_output=True,
-                text=True,
-                timeout=1.5,
-            )
+            proc = _run_shell_cmd("multipointStatus", timeout=1.5)
             if proc.returncode == 0:
                 return json.loads(proc.stdout)
         elif action == "toggle":
-            proc_status = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "multipointStatus"],
-                capture_output=True,
-                text=True,
-                timeout=1.0,
-            )
+            proc_status = _run_shell_cmd("multipointStatus", timeout=1.0)
             if proc_status.returncode == 0:
                 data = json.loads(proc_status.stdout)
                 target = not bool(data.get("multipoint", False))
-                proc = subprocess.run(
-                    ["omarchy-shell", "realme-buds.control", "setMultipoint", "true" if target else "false"],
-                    capture_output=True,
-                    text=True,
-                    timeout=2.0,
-                )
+                proc = _run_shell_cmd("setMultipoint", "true" if target else "false", timeout=2.0)
                 if proc.returncode == 0:
                     return {"multipoint": target, "verified": True}
         elif action in ("on", "off"):
             enabled = (action == "on")
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "setMultipoint", "true" if enabled else "false"],
-                capture_output=True,
-                text=True,
-                timeout=2.0,
-            )
+            proc = _run_shell_cmd("setMultipoint", "true" if enabled else "false", timeout=2.0)
             if proc.returncode == 0:
                 return {"multipoint": enabled, "verified": True}
     except Exception:
@@ -245,30 +171,15 @@ def _try_shell_find(action: str) -> dict[str, object] | None:
         return None
     try:
         if action == "status":
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "ringStatus"],
-                capture_output=True,
-                text=True,
-                timeout=1.5,
-            )
+            proc = _run_shell_cmd("ringStatus", timeout=1.5)
             if proc.returncode == 0:
                 return json.loads(proc.stdout)
         elif action == "stop":
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "stopRingBuds"],
-                capture_output=True,
-                text=True,
-                timeout=2.0,
-            )
+            proc = _run_shell_cmd("stopRingBuds", timeout=2.0)
             if proc.returncode == 0:
                 return {"ringing": False, "stopped": True}
         elif action in ("left", "right", "both"):
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "ringBuds", action],
-                capture_output=True,
-                text=True,
-                timeout=2.0,
-            )
+            proc = _run_shell_cmd("ringBuds", action, timeout=2.0)
             if proc.returncode == 0:
                 return {"ringing": True, "target": action}
     except Exception:
@@ -280,12 +191,7 @@ def _try_shell_status() -> dict[str, object] | None:
     if not shutil.which("omarchy-shell"):
         return None
     try:
-        proc = subprocess.run(
-            ["omarchy-shell", "realme-buds.control", "status"],
-            capture_output=True,
-            text=True,
-            timeout=1.5,
-        )
+        proc = _run_shell_cmd("status", timeout=1.5)
         if proc.returncode == 0:
             data = json.loads(proc.stdout)
             dev_status = data.get("device_status")
@@ -307,33 +213,18 @@ def _try_shell_gesture(
         return None
     try:
         if command in ("status", "list"):
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "gestureStatus"],
-                capture_output=True,
-                text=True,
-                timeout=1.5,
-            )
+            proc = _run_shell_cmd("gestureStatus", timeout=1.5)
             if proc.returncode == 0:
                 data = json.loads(proc.stdout)
                 if command == "list":
                     return {"actions": data.get("actions", [])}
                 return data
         elif command == "set" and side and trigger and action:
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "setGesture", side, trigger, action],
-                capture_output=True,
-                text=True,
-                timeout=2.0,
-            )
+            proc = _run_shell_cmd("setGesture", side, trigger, action, timeout=2.0)
             if proc.returncode == 0:
                 return {"side": side, "trigger": trigger, "action": action, "verified": True}
         elif command == "anc-modes" and modes:
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "setGestureAncModes", json.dumps(modes)],
-                capture_output=True,
-                text=True,
-                timeout=2.0,
-            )
+            proc = _run_shell_cmd("setGestureAncModes", json.dumps(modes), timeout=2.0)
             if proc.returncode == 0:
                 return {"long_press_anc_modes": modes, "verified": True}
     except Exception:
@@ -352,12 +243,7 @@ def _try_shell_eq(
         return None
     try:
         if eq_command in ("status", "list"):
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "queryEq"],
-                capture_output=True,
-                text=True,
-                timeout=1.5,
-            )
+            proc = _run_shell_cmd("queryEq", timeout=1.5)
             if proc.returncode == 0:
                 data = json.loads(proc.stdout)
                 if not data:
@@ -371,40 +257,20 @@ def _try_shell_eq(
                     }
                 return data
         elif eq_command == "set" and preset:
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "setEq", preset],
-                capture_output=True,
-                text=True,
-                timeout=2.0,
-            )
+            proc = _run_shell_cmd("setEq", preset, timeout=2.0)
             if proc.returncode == 0:
                 return {"preset": preset, "verified": True}
         elif eq_command == "custom" and entry_id is not None and gains is not None:
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "setCustomEq", str(entry_id), json.dumps(list(gains))],
-                capture_output=True,
-                text=True,
-                timeout=2.0,
-            )
+            proc = _run_shell_cmd("setCustomEq", str(entry_id), json.dumps(list(gains)), timeout=2.0)
             if proc.returncode == 0:
                 return {"entry_id": entry_id, "gains_db": list(gains), "verified": True}
         elif eq_command == "add" and name:
             gains_json = json.dumps(list(gains)) if gains is not None else "[]"
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "addCustomEq", name, gains_json],
-                capture_output=True,
-                text=True,
-                timeout=2.0,
-            )
+            proc = _run_shell_cmd("addCustomEq", name, gains_json, timeout=2.0)
             if proc.returncode == 0:
                 return {"name": name, "verified": True}
         elif eq_command == "delete" and entry_id is not None:
-            proc = subprocess.run(
-                ["omarchy-shell", "realme-buds.control", "deleteCustomEq", str(entry_id)],
-                capture_output=True,
-                text=True,
-                timeout=2.0,
-            )
+            proc = _run_shell_cmd("deleteCustomEq", str(entry_id), timeout=2.0)
             if proc.returncode == 0:
                 return {"entry_id": entry_id, "deleted": True}
     except Exception:
